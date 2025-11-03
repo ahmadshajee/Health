@@ -1,10 +1,13 @@
 import axios from 'axios';
 import { LoginCredentials, RegisterData, User } from '../types/auth';
 
-// Base API URL - supports both development and production
-const API_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://health-8zum.onrender.com/api'  // Production backend on Render
-  : '/api';  // Uses proxy in development
+// Base API URL - Use backend URL directly for GitHub Pages deployment
+const API_URL = window.location.hostname === 'localhost'
+  ? '/api'  // Development - uses proxy
+  : 'https://health-8zum.onrender.com/api';  // Production - full URL
+
+// Log API URL for debugging
+console.log('API Base URL:', API_URL);
 
 // Create axios instance
 const api = axios.create({
@@ -20,8 +23,18 @@ api.interceptors.request.use(config => {
   if (token) {
     config.headers['x-auth-token'] = token;
   }
+  console.log('Making request to:', `${config.baseURL || ''}${config.url || ''}`);
   return config;
 });
+
+// Add response interceptor for error handling
+api.interceptors.response.use(
+  response => response,
+  error => {
+    console.error('API Error:', error.response?.data || error.message);
+    return Promise.reject(error);
+  }
+);
 
 // Auth service functions
 export const login = async (credentials: LoginCredentials): Promise<{ user: User; token: string }> => {
