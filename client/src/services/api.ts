@@ -1,8 +1,10 @@
 import axios from 'axios';
 import { LoginCredentials, RegisterData, User } from '../types/auth';
 
-// Base API URL
-const API_URL = '/api';
+// Base API URL - supports both development and production
+const API_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://your-backend-url.onrender.com/api'  // Replace with your actual Render URL after deployment
+  : '/api';  // Uses proxy in development
 
 // Create axios instance
 const api = axios.create({
