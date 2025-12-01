@@ -16,6 +16,8 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import NewPrescription from './pages/NewPrescription';
 import PrescriptionDetail from './pages/PrescriptionDetail';
+import DoctorPrescriptions from './pages/DoctorPrescriptions';
+import PatientManagement from './pages/PatientManagement';
 import NotFound from './pages/NotFound';
 import Unauthorized from './pages/Unauthorized';
 
@@ -63,6 +65,22 @@ const App = () => {
               element={
                 <ProtectedRoute requiredRole="doctor">
                   <NewPrescription />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/prescriptions/all" 
+              element={
+                <ProtectedRoute requiredRole="doctor">
+                  <DoctorPrescriptions />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/patients" 
+              element={
+                <ProtectedRoute requiredRole="doctor">
+                  <PatientManagement />
                 </ProtectedRoute>
               } 
             />

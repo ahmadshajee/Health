@@ -4,8 +4,6 @@ import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
-import IconButton from '@mui/material/IconButton';
-import MenuIcon from '@mui/icons-material/Menu';
 import { Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Menu from '@mui/material/Menu';
@@ -58,9 +56,17 @@ const Header = () => {
               </Button>
               
               {user.role === 'doctor' && (
-                <Button color="inherit" component={RouterLink} to="/prescriptions/new">
-                  New Prescription
-                </Button>
+                <>
+                  <Button color="inherit" component={RouterLink} to="/prescriptions/new">
+                    New Prescription
+                  </Button>
+                  <Button color="inherit" component={RouterLink} to="/prescriptions/all">
+                    All Prescriptions
+                  </Button>
+                  <Button color="inherit" component={RouterLink} to="/patients">
+                    Manage Patients
+                  </Button>
+                </>
               )}
               
               <IconButton

@@ -1,7 +1,102 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const { getUsers, findUserById, updateUser } = require('../models/user');
 const { auth, doctor, patient } = require('../middleware/auth');
+
+// Configure multer for profile picture uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadsDir = path.join(__dirname, '../uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'profile-' + req.user.id + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only JPEG, PNG and GIF are allowed.'), false);
+  }
+};
+
+const upload = multer({ 
+  storage, 
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
+
+/**
+ * @route   POST /api/users/profile/picture
+ * @desc    Upload profile picture
+ * @access  Private
+ */
+router.post('/profile/picture', auth, upload.single('profilePicture'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    // Delete old profile picture if exists
+    const user = findUserById(req.user.id);
+    if (user && user.profilePicture) {
+      const oldPicturePath = path.join(__dirname, '..', user.profilePicture);
+      if (fs.existsSync(oldPicturePath)) {
+        fs.unlinkSync(oldPicturePath);
+      }
+    }
+
+    // Update user with new profile picture path
+    const profilePicturePath = '/uploads/' + req.file.filename;
+    const updatedUser = await updateUser(req.user.id, { profilePicture: profilePicturePath });
+
+    res.json({
+      message: 'Profile picture uploaded successfully',
+      profilePicture: profilePicturePath,
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Upload profile picture error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/**
+ * @route   DELETE /api/users/profile/picture
+ * @desc    Delete profile picture
+ * @access  Private
+ */
+router.delete('/profile/picture', auth, async (req, res) => {
+  try {
+    const user = findUserById(req.user.id);
+    if (user && user.profilePicture) {
+      const picturePath = path.join(__dirname, '..', user.profilePicture);
+      if (fs.existsSync(picturePath)) {
+        fs.unlinkSync(picturePath);
+      }
+    }
+
+    const updatedUser = await updateUser(req.user.id, { profilePicture: null });
+
+    res.json({
+      message: 'Profile picture deleted successfully',
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Delete profile picture error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 /**
  * @route   GET /api/users/patients
@@ -125,14 +220,14 @@ router.get('/profile', auth, (req, res) => {
  */
 router.put('/profile', auth, async (req, res) => {
   try {
-    const { firstName, lastName, contactNumber, specialization, dateOfBirth, address } = req.body;
+    const { firstName, lastName, contactNumber, specialization, dateOfBirth, address, phone, bloodType, allergies, chronicConditions, emergencyContact, gender } = req.body;
     
     const updateData = {
       firstName,
       lastName,
       contactNumber,
       ...(req.user.role === 'doctor' && { specialization }),
-      ...(req.user.role === 'patient' && { dateOfBirth, address })
+      ...(req.user.role === 'patient' && { dateOfBirth, address, phone, bloodType, allergies, chronicConditions, emergencyContact, gender })
     };
 
     // Remove undefined values

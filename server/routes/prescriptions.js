@@ -22,18 +22,88 @@ router.get('/', auth, async (req, res) => {
     const userId = req.user.id;
     const role = req.user.role;
     
+    console.log('Getting prescriptions for user:', userId, 'role:', role);
+    
     let prescriptions = [];
     
     // Get prescriptions based on role
     if (role === 'doctor') {
       prescriptions = findPrescriptionsByDoctorId(userId);
+      console.log('Found', prescriptions.length, 'prescriptions for doctor');
+      
+      // Enhance with patient information
+      prescriptions = prescriptions.map(prescription => {
+        const patient = findUserById(prescription.patientId);
+        return {
+          ...prescription,
+          patientName: patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown Patient',
+          patientEmail: patient ? patient.email : 'N/A'
+        };
+      });
     } else if (role === 'patient') {
       prescriptions = findPrescriptionsByPatientId(userId);
+      console.log('Found', prescriptions.length, 'prescriptions for patient');
+      
+      // Enhance with doctor information
+      prescriptions = prescriptions.map(prescription => {
+        const doctor = findUserById(prescription.doctorId);
+        return {
+          ...prescription,
+          doctorName: doctor ? `Dr. ${doctor.firstName} ${doctor.lastName}` : 'Unknown Doctor',
+          doctorSpecialization: doctor ? doctor.specialization : 'N/A'
+        };
+      });
     }
+    
+    // Sort by creation date (newest first)
+    prescriptions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     
     res.json(prescriptions);
   } catch (error) {
     console.error('Get prescriptions error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/**
+ * @route   GET /api/prescriptions/stats
+ * @desc    Get prescription statistics for doctor
+ * @access  Private (Doctor only)
+ */
+router.get('/stats', doctor, async (req, res) => {
+  try {
+    const doctorId = req.user.id;
+    const prescriptions = findPrescriptionsByDoctorId(doctorId);
+    
+    const stats = {
+      total: prescriptions.length,
+      active: prescriptions.filter(p => p.status === 'active').length,
+      completed: prescriptions.filter(p => p.status === 'completed').length,
+      thisMonth: prescriptions.filter(p => {
+        const prescriptionDate = new Date(p.createdAt);
+        const now = new Date();
+        return prescriptionDate.getMonth() === now.getMonth() && 
+               prescriptionDate.getFullYear() === now.getFullYear();
+      }).length,
+      uniquePatients: [...new Set(prescriptions.map(p => p.patientId))].length,
+      recentPrescriptions: prescriptions
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 5)
+        .map(p => {
+          const patient = findUserById(p.patientId);
+          return {
+            id: p.id,
+            diagnosis: p.diagnosis,
+            patientName: patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown',
+            createdAt: p.createdAt,
+            status: p.status
+          };
+        })
+    };
+    
+    res.json(stats);
+  } catch (error) {
+    console.error('Get prescription stats error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

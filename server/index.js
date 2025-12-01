@@ -30,6 +30,12 @@ if (!fs.existsSync(dataDir)) {
   });
 }
 
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+}
+
 // Middleware
 app.use(cors({
   origin: [
@@ -40,6 +46,9 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(morgan('dev'));
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Add logging middleware
 app.use((req, res, next) => {

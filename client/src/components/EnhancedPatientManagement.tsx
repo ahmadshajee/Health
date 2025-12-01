@@ -4,13 +4,6 @@ import {
   Paper,
   Typography,
   Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -20,48 +13,36 @@ import {
   Chip,
   Alert,
   CircularProgress,
-  Tooltip,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Card,
   CardContent,
+  CardActions,
   List,
   ListItem,
   ListItemText,
+  Stack,
   Divider,
-  Badge,
-  Tab,
-  Tabs,
-  Stack
+  Avatar
 } from '@mui/material';
 import {
   Edit as EditIcon,
-  Delete as DeleteIcon,
-  Add as AddIcon,
   Email as EmailIcon,
   Phone as PhoneIcon,
   Person as PersonIcon,
-  ExpandMore as ExpandMoreIcon,
-  MedicalServices as MedicalIcon,
   LocalPharmacy as PharmacyIcon,
-  History as HistoryIcon,
   Bloodtype as BloodIcon,
   ContactEmergency as EmergencyIcon,
   Assignment as AssignmentIcon,
-  Warning as WarningIcon
+  Warning as WarningIcon,
+  Cake as CakeIcon,
+  Visibility as VisibilityIcon
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { Patient } from '../types/auth';
-import { 
-  getManagedPatients, 
-  getPatientMedicalDetails, 
-  updatePatientMedicalInfo,
-  createPatient,
-  updatePatient,
-  deletePatient 
-} from '../services/patients';
-
-interface PatientFormData {
+import {
+  getManagedPatients,
+  getPatientMedicalDetails,
+  updatePatientMedicalInfo
+} from '../services/patients';interface PatientFormData {
   firstName: string;
   lastName: string;
   email: string;
@@ -93,6 +74,7 @@ interface EnhancedPatient extends Omit<Patient, 'medicalHistory'> {
 }
 
 const EnhancedPatientManagement: React.FC = () => {
+  const navigate = useNavigate();
   const [patients, setPatients] = useState<EnhancedPatient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -108,7 +90,6 @@ const EnhancedPatientManagement: React.FC = () => {
     bloodType: '',
     insurance: { provider: '', policyNumber: '', groupNumber: '' }
   });
-  const [tabValue, setTabValue] = useState(0);
 
   // Fetch managed patients on component mount
   useEffect(() => {
@@ -171,7 +152,7 @@ const EnhancedPatientManagement: React.FC = () => {
 
   const handleAddAllergy = () => {
     const newAllergy = prompt('Enter new allergy:');
-    if (newAllergy && newAllergy.trim()) {
+    if (newAllergy?.trim()) {
       setMedicalFormData(prev => ({
         ...prev,
         allergies: [...prev.allergies, newAllergy.trim()]
@@ -188,7 +169,7 @@ const EnhancedPatientManagement: React.FC = () => {
 
   const handleAddMedicalHistory = () => {
     const newHistory = prompt('Enter medical history item:');
-    if (newHistory && newHistory.trim()) {
+    if (newHistory?.trim()) {
       setMedicalFormData(prev => ({
         ...prev,
         medicalHistory: [...prev.medicalHistory, newHistory.trim()]
@@ -223,161 +204,213 @@ const EnhancedPatientManagement: React.FC = () => {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h5" component="h2">
-          Patient Management - My Patients
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {patients.length} patients under your care
-        </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+        <Box>
+          <Typography variant="h4" component="h1" gutterBottom>
+            My Patients Dashboard
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            {patients.length} {patients.length === 1 ? 'patient' : 'patients'} under your care
+          </Typography>
+        </Box>
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
       )}
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Patient Info</TableCell>
-              <TableCell>Contact</TableCell>
-              <TableCell>Prescriptions</TableCell>
-              <TableCell>Latest Treatment</TableCell>
-              <TableCell>Medical Status</TableCell>
-              <TableCell align="center">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {patients.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} align="center">
-                  <Typography color="textSecondary">
-                    No patients found. Patients will appear here after you create prescriptions for them.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              patients.map((patient) => (
-                <TableRow key={patient.id} hover>
-                  <TableCell>
-                    <Box display="flex" alignItems="center">
-                      <PersonIcon color="primary" sx={{ mr: 1 }} />
-                      <Box>
-                        <Typography variant="body1" fontWeight="bold">
-                          {patient.firstName} {patient.lastName}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          DOB: {formatDate(patient.dateOfBirth)}
-                        </Typography>
-                        <Chip 
-                          label="Patient" 
-                          size="small" 
-                          color="secondary" 
-                          variant="outlined"
-                        />
-                      </Box>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
+      {patients.length === 0 ? (
+        <Paper elevation={3} sx={{ p: 6, textAlign: 'center' }}>
+          <PersonIcon sx={{ fontSize: 80, color: 'text.secondary', mb: 2 }} />
+          <Typography variant="h5" gutterBottom>
+            No patients yet
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Patients will appear here after you create prescriptions for them.
+          </Typography>
+        </Paper>
+      ) : (
+        <Grid container spacing={3}>
+          {patients.map((patient) => (
+            <Grid item xs={12} sm={6} md={4} key={patient.id}>
+              <Card 
+                elevation={3} 
+                sx={{ 
+                  height: '100%', 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: 6
+                  }
+                }}
+              >
+                <CardContent sx={{ flexGrow: 1 }}>
+                  {/* Patient Header */}
+                  <Box display="flex" alignItems="center" mb={2}>
+                    <Avatar 
+                      sx={{ 
+                        bgcolor: 'primary.main', 
+                        width: 56, 
+                        height: 56, 
+                        mr: 2 
+                      }}
+                    >
+                      <PersonIcon fontSize="large" />
+                    </Avatar>
                     <Box>
-                      <Box display="flex" alignItems="center" mb={0.5}>
-                        <EmailIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                        <Typography variant="body2">{patient.email}</Typography>
-                      </Box>
-                      {patient.contactNumber && (
-                        <Box display="flex" alignItems="center">
-                          <PhoneIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                          <Typography variant="body2">{patient.contactNumber}</Typography>
-                        </Box>
-                      )}
+                      <Typography variant="h6" component="div">
+                        {patient.firstName} {patient.lastName}
+                      </Typography>
+                      <Chip 
+                        label="Patient" 
+                        size="small" 
+                        color="secondary" 
+                        sx={{ mt: 0.5 }}
+                      />
                     </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Stack direction="row" spacing={1}>
-                      <Badge badgeContent={patient.totalPrescriptions || 0} color="primary">
-                        <PharmacyIcon color="action" />
-                      </Badge>
-                      <Box>
-                        <Typography variant="body2" fontWeight="bold">
-                          {patient.totalPrescriptions || 0} Total
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {patient.activePrescriptions || 0} Active
+                  </Box>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  {/* Contact Information */}
+                  <Stack spacing={1.5} mb={2}>
+                    <Box display="flex" alignItems="center">
+                      <EmailIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+                      <Typography variant="body2" noWrap>
+                        {patient.email}
+                      </Typography>
+                    </Box>
+                    
+                    {patient.contactNumber && (
+                      <Box display="flex" alignItems="center">
+                        <PhoneIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+                        <Typography variant="body2">
+                          {patient.contactNumber}
                         </Typography>
                       </Box>
+                    )}
+
+                    <Box display="flex" alignItems="center">
+                      <CakeIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+                      <Typography variant="body2">
+                        {formatDate(patient.dateOfBirth)}
+                      </Typography>
+                    </Box>
+                  </Stack>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  {/* Prescription Stats */}
+                  <Box mb={2}>
+                    <Typography variant="subtitle2" color="primary" gutterBottom>
+                      Prescription Summary
+                    </Typography>
+                    <Stack direction="row" spacing={2} flexWrap="wrap">
+                      <Chip
+                        icon={<PharmacyIcon />}
+                        label={`${patient.totalPrescriptions || 0} Total`}
+                        color="primary"
+                        variant="outlined"
+                        size="small"
+                      />
+                      <Chip
+                        icon={<AssignmentIcon />}
+                        label={`${patient.activePrescriptions || 0} Active`}
+                        color="success"
+                        variant="outlined"
+                        size="small"
+                      />
                     </Stack>
-                  </TableCell>
-                  <TableCell>
-                    {patient.latestPrescription ? (
-                      <Box>
-                        <Typography variant="body2">
+                  </Box>
+
+                  {/* Latest Prescription */}
+                  {patient.latestPrescription && (
+                    <Box>
+                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                        Latest Treatment
+                      </Typography>
+                      <Paper variant="outlined" sx={{ p: 1.5, bgcolor: 'grey.50' }}>
+                        <Typography variant="body2" fontWeight="bold" gutterBottom>
                           {patient.latestPrescription.diagnosis}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
                           {formatDate(patient.latestPrescription.createdAt)}
                         </Typography>
-                        <Chip 
-                          label={patient.latestPrescription.status} 
-                          size="small" 
-                          color={patient.latestPrescription.status === 'active' ? 'success' : 'default'}
-                          sx={{ ml: 1 }}
-                        />
-                      </Box>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">
-                        No prescriptions yet
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Stack direction="column" spacing={0.5}>
-                      {patient.allergies && patient.allergies.length > 0 && (
-                        <Chip 
-                          label={`${patient.allergies.length} Allergies`} 
-                          size="small" 
-                          color="warning" 
-                          icon={<WarningIcon />}
-                        />
-                      )}
-                      {patient.bloodType && (
-                        <Chip 
-                          label={patient.bloodType} 
-                          size="small" 
-                          color="info" 
-                          icon={<BloodIcon />}
-                        />
-                      )}
-                    </Stack>
-                  </TableCell>
-                  <TableCell align="center">
-                    <Tooltip title="View Medical Details">
-                      <IconButton
+                      </Paper>
+                    </Box>
+                  )}
+
+                  {/* Medical Alerts */}
+                  {patient.allergies && patient.allergies.length > 0 && (
+                    <Box mt={2}>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <WarningIcon fontSize="small" color="warning" />
+                        <Typography variant="caption" color="warning.main">
+                          {patient.allergies.length} {patient.allergies.length === 1 ? 'Allergy' : 'Allergies'}
+                        </Typography>
+                      </Stack>
+                    </Box>
+                  )}
+
+                  {patient.bloodType && (
+                    <Box mt={1}>
+                      <Chip
+                        icon={<BloodIcon />}
+                        label={`Blood: ${patient.bloodType}`}
                         size="small"
-                        onClick={() => handleViewMedicalDetails(patient)}
-                        color="primary"
-                      >
-                        <MedicalIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Edit Medical Info">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEditMedicalInfo(patient)}
-                        color="secondary"
-                      >
-                        <EditIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                        color="info"
+                        variant="outlined"
+                      />
+                    </Box>
+                  )}
+                </CardContent>
+
+                <Divider />
+
+                {/* Action Buttons */}
+                <CardActions sx={{ p: 2, gap: 1, flexWrap: 'wrap' }}>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    startIcon={<VisibilityIcon />}
+                    onClick={() => handleViewMedicalDetails(patient)}
+                    fullWidth
+                  >
+                    View Details
+                  </Button>
+                  
+                  {Boolean(patient.totalPrescriptions && patient.totalPrescriptions > 0) && (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<PharmacyIcon />}
+                      onClick={() => navigate('/prescriptions/all')}
+                      fullWidth
+                    >
+                      View Prescriptions
+                    </Button>
+                  )}
+                  
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="secondary"
+                    startIcon={<EditIcon />}
+                    onClick={() => handleEditMedicalInfo(patient)}
+                    fullWidth
+                  >
+                    Edit Medical Info
+                  </Button>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
 
       {/* Medical Details Dialog */}
       <Dialog 
@@ -433,7 +466,7 @@ const EnhancedPatientManagement: React.FC = () => {
                         {medicalDetails.allergies && medicalDetails.allergies.length > 0 ? (
                           medicalDetails.allergies.map((allergy: string, index: number) => (
                             <Chip 
-                              key={index} 
+                              key={`allergy-view-${allergy}-${index}`} 
                               label={allergy} 
                               color="warning" 
                               size="small" 
@@ -478,7 +511,7 @@ const EnhancedPatientManagement: React.FC = () => {
                               </Typography>
                               <List dense>
                                 {prescription.medications.map((med: any, medIndex: number) => (
-                                  <ListItem key={medIndex}>
+                                  <ListItem key={`${prescription.id}-med-${med.name}-${medIndex}`}>
                                     <ListItemText 
                                       primary={med.name}
                                       secondary={`${med.dosage} - ${med.frequency} for ${med.duration}`}
@@ -532,7 +565,7 @@ const EnhancedPatientManagement: React.FC = () => {
                         {medicalDetails.medicalHistory && medicalDetails.medicalHistory.length > 0 ? (
                           <List dense>
                             {medicalDetails.medicalHistory.map((history: string, index: number) => (
-                              <ListItem key={index}>
+                              <ListItem key={`history-view-${history}-${index}`}>
                                 <ListItemText primary={history} />
                               </ListItem>
                             ))}
@@ -601,7 +634,7 @@ const EnhancedPatientManagement: React.FC = () => {
               <Box display="flex" flexWrap="wrap" gap={1} mb={2}>
                 {medicalFormData.allergies.map((allergy, index) => (
                   <Chip
-                    key={index}
+                    key={`form-allergy-${allergy}-${index}`}
                     label={allergy}
                     color="warning"
                     onDelete={() => handleRemoveAllergy(index)}
@@ -619,7 +652,7 @@ const EnhancedPatientManagement: React.FC = () => {
               <Box display="flex" flexDirection="column" gap={1} mb={2}>
                 {medicalFormData.medicalHistory.map((history, index) => (
                   <Chip
-                    key={index}
+                    key={`form-history-${history}-${index}`}
                     label={history}
                     onDelete={() => handleRemoveMedicalHistory(index)}
                   />

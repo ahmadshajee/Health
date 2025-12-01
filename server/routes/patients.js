@@ -114,15 +114,19 @@ router.get('/doctor/managed', auth, async (req, res) => {
     const doctorId = req.user.id;
     const userRole = req.user.role;
 
+    console.log('Getting managed patients for doctor:', doctorId);
+
     if (userRole !== 'doctor') {
       return res.status(403).json({ message: 'Access denied. Doctor role required.' });
     }
 
     // Get all prescriptions by this doctor
     const doctorPrescriptions = findPrescriptionsByDoctorId(doctorId);
+    console.log('Total prescriptions by doctor:', doctorPrescriptions.length);
     
     // Get unique patient IDs from prescriptions
     const patientIds = [...new Set(doctorPrescriptions.map(p => p.patientId))];
+    console.log('Unique patients:', patientIds.length);
     
     // Get all users
     const users = getUsers();
@@ -134,19 +138,44 @@ router.get('/doctor/managed', auth, async (req, res) => {
         // Get prescriptions for this patient by this doctor
         const patientPrescriptions = doctorPrescriptions
           .filter(p => p.patientId === patient.id)
-          .map(({ qrCode, ...prescriptionData }) => prescriptionData); // Remove QR code from response
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        
+        // Calculate prescription statistics
+        const activePrescriptions = patientPrescriptions.filter(p => p.status === 'active').length;
+        const completedPrescriptions = patientPrescriptions.filter(p => p.status === 'completed').length;
+        
+        // Get prescriptions without QR codes for response
+        const prescriptionsData = patientPrescriptions.map(({ qrCode, ...prescriptionData }) => prescriptionData);
         
         // Remove password from patient data
         const { password, ...patientData } = patient;
         
+        // Get all unique medications prescribed
+        const allMedications = patientPrescriptions.flatMap(p => p.medications || []);
+        
+        // Get all unique diagnoses
+        const diagnoses = [...new Set(patientPrescriptions.map(p => p.diagnosis).filter(Boolean))];
+        
         return {
           ...patientData,
-          prescriptionHistory: patientPrescriptions,
+          prescriptionHistory: prescriptionsData,
           totalPrescriptions: patientPrescriptions.length,
-          latestPrescription: patientPrescriptions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null
+          activePrescriptions,
+          completedPrescriptions,
+          latestPrescription: patientPrescriptions[0] || null,
+          allMedications,
+          diagnoses,
+          lastVisit: patientPrescriptions[0]?.createdAt || null
         };
+      })
+      .sort((a, b) => {
+        // Sort by most recent prescription
+        const dateA = a.lastVisit ? new Date(a.lastVisit) : new Date(0);
+        const dateB = b.lastVisit ? new Date(b.lastVisit) : new Date(0);
+        return dateB - dateA;
       });
     
+    console.log('Managed patients with stats:', managedPatients.length);
     res.json(managedPatients);
   } catch (error) {
     console.error('Get managed patients error:', error);
@@ -165,6 +194,8 @@ router.get('/:id/medical-details', auth, async (req, res) => {
     const doctorId = req.user.id;
     const userRole = req.user.role;
 
+    console.log('Getting medical details for patient:', patientId, 'by doctor:', doctorId);
+
     if (userRole !== 'doctor') {
       return res.status(403).json({ message: 'Access denied. Doctor role required.' });
     }
@@ -179,29 +210,60 @@ router.get('/:id/medical-details', auth, async (req, res) => {
     // Get all prescriptions for this patient by this doctor
     const patientPrescriptions = findPrescriptionsByDoctorId(doctorId)
       .filter(p => p.patientId === patientId)
-      .map(({ qrCode, ...prescriptionData }) => prescriptionData)
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    console.log('Found', patientPrescriptions.length, 'prescriptions for patient');
 
     // Remove password from patient data
     const { password, ...patientData } = patient;
     
+    // Calculate statistics
+    const activePrescriptions = patientPrescriptions.filter(p => p.status === 'active');
+    const completedPrescriptions = patientPrescriptions.filter(p => p.status === 'completed');
+    
+    // Get all medications with frequency count
+    const medicationMap = new Map();
+    patientPrescriptions.forEach(p => {
+      (p.medications || []).forEach(med => {
+        const key = med.name.toLowerCase();
+        if (medicationMap.has(key)) {
+          medicationMap.set(key, medicationMap.get(key) + 1);
+        } else {
+          medicationMap.set(key, 1);
+        }
+      });
+    });
+    
     // Enhanced medical details
     const medicalDetails = {
       ...patientData,
-      prescriptionHistory: patientPrescriptions,
+      prescriptionHistory: patientPrescriptions.map(({ qrCode, ...prescriptionData }) => ({
+        ...prescriptionData,
+        canView: true,
+        canEdit: prescriptionData.status === 'active',
+        canDownload: true
+      })),
       totalPrescriptions: patientPrescriptions.length,
-      activePrescriptions: patientPrescriptions.filter(p => p.status === 'active').length,
-      completedPrescriptions: patientPrescriptions.filter(p => p.status === 'completed').length,
-      // Extract medications from prescriptions
+      activePrescriptions: activePrescriptions.length,
+      completedPrescriptions: completedPrescriptions.length,
+      activePrescriptionsList: activePrescriptions.map(({ qrCode, ...p }) => p),
+      // Extract all medications from prescriptions
       allMedications: patientPrescriptions.flatMap(p => p.medications || []),
-      // Extract diagnoses
+      // Medication frequency
+      medicationFrequency: Array.from(medicationMap.entries()).map(([name, count]) => ({ name, count })),
+      // Extract unique diagnoses
       diagnoses: [...new Set(patientPrescriptions.map(p => p.diagnosis).filter(Boolean))],
       // Patient medical information (if available)
       allergies: patient.allergies || [],
       medicalHistory: patient.medicalHistory || [],
+      chronicConditions: patient.chronicConditions || [],
       emergencyContact: patient.emergencyContact || null,
       bloodType: patient.bloodType || null,
-      insurance: patient.insurance || null
+      insurance: patient.insurance || null,
+      // Additional stats
+      firstVisit: patientPrescriptions[patientPrescriptions.length - 1]?.createdAt || null,
+      lastVisit: patientPrescriptions[0]?.createdAt || null,
+      totalMedications: Array.from(medicationMap.keys()).length
     };
     
     res.json(medicalDetails);
