@@ -40,9 +40,14 @@ if (!fs.existsSync(uploadsDir)) {
 app.use(cors({
   origin: [
     'http://localhost:3000',
-    'https://ahmadshajee.github.io'
+    'http://localhost:3001',
+    'https://ahmadshajee.github.io',
+    'https://ahmadshajee.github.io/Health',
+    'https://health-ahmadshajee.vercel.app'
   ],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 app.use(morgan('dev'));
