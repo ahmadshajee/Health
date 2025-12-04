@@ -35,7 +35,9 @@ api.interceptors.response.use(
       // Token expired or invalid
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/';
+      // Use basename for GitHub Pages
+      const basename = process.env.NODE_ENV === 'production' ? '/Health' : '';
+      window.location.href = basename + '/';
     }
     return Promise.reject(error);
   }
