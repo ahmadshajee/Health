@@ -31,13 +31,15 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
+    // Only redirect on 401 if it's NOT a login/register request
+    const isAuthRequest = error.config?.url?.includes('/auth/login') || 
+                          error.config?.url?.includes('/auth/register');
+    
+    if (error.response?.status === 401 && !isAuthRequest) {
+      // Token expired or invalid - only for protected routes
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      // Use basename for GitHub Pages
-      const basename = process.env.NODE_ENV === 'production' ? '/Health' : '';
-      window.location.href = basename + '/';
+      // Don't redirect - just clear storage and let the app handle it
     }
     return Promise.reject(error);
   }
