@@ -31,15 +31,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Only redirect on 401 if it's NOT a login/register request
-    const isAuthRequest = error.config?.url?.includes('/auth/login') || 
-                          error.config?.url?.includes('/auth/register');
-    
-    if (error.response?.status === 401 && !isAuthRequest) {
-      // Token expired or invalid - only for protected routes
+    if (error.response?.status === 401) {
+      // Token expired or invalid
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      // Don't redirect - just clear storage and let the app handle it
+      window.location.href = '/';
     }
     return Promise.reject(error);
   }
