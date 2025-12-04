@@ -170,6 +170,16 @@ export const usersAPI = {
     }
   },
 
+  // Create new patient (doctors only)
+  createPatient: async (patientData) => {
+    try {
+      const response = await api.post('/users/patients/create', patientData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Failed to create patient' };
+    }
+  },
+
   // Get all doctors
   getDoctors: async () => {
     try {

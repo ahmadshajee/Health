@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { getUsers, findUserById, updateUser } = require('../models/user');
+const { getUsers, findUserById, updateUser, createUser } = require('../models/user');
 const { auth, doctor, patient } = require('../middleware/auth');
 
 // Configure multer for profile picture uploads
@@ -94,6 +94,57 @@ router.delete('/profile/picture', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Delete profile picture error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/**
+ * @route   POST /api/users/patients/create
+ * @desc    Create a new patient account (doctors only)
+ * @access  Private (Doctor)
+ */
+router.post('/patients/create', doctor, async (req, res) => {
+  try {
+    const { firstName, lastName, email, phone, dateOfBirth, gender, address } = req.body;
+
+    // Validate required fields
+    if (!firstName || !lastName || !email) {
+      return res.status(400).json({ message: 'First name, last name, and email are required' });
+    }
+
+    // Check if email is valid
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
+
+    // Create new patient with default password
+    const newPatient = await createUser({
+      firstName,
+      lastName,
+      email: email.toLowerCase(),
+      password: 'password123', // Default password
+      role: 'patient',
+      phone: phone || '',
+      dateOfBirth: dateOfBirth || '',
+      gender: gender || '',
+      address: address || '',
+      allergies: [],
+      chronicConditions: [],
+      createdByDoctor: req.user.id
+    });
+
+    console.log('New patient created by doctor:', newPatient.id);
+
+    res.status(201).json({
+      message: 'Patient account created successfully. Default password is: password123',
+      patient: newPatient
+    });
+  } catch (error) {
+    console.error('Create patient error:', error);
+    if (error.message === 'User with this email already exists') {
+      return res.status(400).json({ message: 'A patient with this email already exists' });
+    }
     res.status(500).json({ message: 'Server error' });
   }
 });
