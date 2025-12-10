@@ -5,12 +5,26 @@ const QRCode = require('qrcode');
 // Path to prescriptions data file
 const prescriptionsFilePath = path.join(__dirname, '../data/prescriptions.json');
 
+// Ensure data directory and file exist
+const dataDir = path.dirname(prescriptionsFilePath);
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+if (!fs.existsSync(prescriptionsFilePath)) {
+  fs.writeFileSync(prescriptionsFilePath, JSON.stringify([], null, 2));
+}
+
 /**
  * Get all prescriptions from the JSON file
  * @returns {Array} Array of prescriptions
  */
 const getPrescriptions = () => {
   try {
+    // Ensure file exists before reading
+    if (!fs.existsSync(prescriptionsFilePath)) {
+      fs.writeFileSync(prescriptionsFilePath, JSON.stringify([], null, 2));
+      return [];
+    }
     const data = fs.readFileSync(prescriptionsFilePath, 'utf8');
     return JSON.parse(data);
   } catch (error) {
@@ -25,7 +39,13 @@ const getPrescriptions = () => {
  */
 const savePrescriptions = (prescriptions) => {
   try {
+    // Ensure directory exists before writing
+    const dataDir = path.dirname(prescriptionsFilePath);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
     fs.writeFileSync(prescriptionsFilePath, JSON.stringify(prescriptions, null, 2));
+    console.log('Prescriptions saved successfully, count:', prescriptions.length);
   } catch (error) {
     console.error('Error writing prescriptions file:', error);
   }

@@ -23,6 +23,11 @@ if (!fs.existsSync(usersFilePath)) {
  */
 const getUsers = () => {
   try {
+    // Ensure file exists before reading
+    if (!fs.existsSync(usersFilePath)) {
+      fs.writeFileSync(usersFilePath, JSON.stringify([], null, 2));
+      return [];
+    }
     const data = fs.readFileSync(usersFilePath, 'utf8');
     return JSON.parse(data);
   } catch (error) {
@@ -37,7 +42,12 @@ const getUsers = () => {
  */
 const saveUsers = (users) => {
   try {
+    // Ensure directory exists before writing
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
     fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2));
+    console.log('Users saved successfully, count:', users.length);
   } catch (error) {
     console.error('Error writing users file:', error);
   }
