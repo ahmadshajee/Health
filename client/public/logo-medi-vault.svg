@@ -1,0 +1,6 @@
+<!-- This is a placeholder SVG for the Medi-Vault logo -->
+<!-- Replace this file with the actual logo image (logo-medi-vault.png) -->
+<svg width="200" height="60" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+  <text x="10" y="35" font-family="Arial, sans-serif" font-size="24" fill="#134F4D">Medi-Vault</text>
+  <text x="10" y="50" font-family="Arial, sans-serif" font-size="12" fill="#7ECECA">Health on your fingertips</text>
+</svg>
