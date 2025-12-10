@@ -169,10 +169,11 @@ const authenticateUser = async (email, password) => {
     throw new Error('Invalid credentials');
   }
   
-  // Generate JWT token
+  // Generate JWT token - use env variable or fallback secret
+  const jwtSecret = process.env.JWT_SECRET || 'healthcare_management_secret_key_2025';
   const token = jwt.sign(
     { id: user.id, role: user.role },
-    process.env.JWT_SECRET,
+    jwtSecret,
     { expiresIn: '1d' }
   );
   

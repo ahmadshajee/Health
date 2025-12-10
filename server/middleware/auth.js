@@ -17,8 +17,9 @@ const auth = async (req, res, next) => {
   }
   
   try {
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Verify token - use env variable or fallback secret
+    const jwtSecret = process.env.JWT_SECRET || 'healthcare_management_secret_key_2025';
+    const decoded = jwt.verify(token, jwtSecret);
     
     // Get full user data
     const user = findUserById(decoded.id);
