@@ -55,7 +55,11 @@ app.use(cors({
     'http://localhost:3001',
     'https://ahmadshajee.github.io',
     'https://ahmadshajee.github.io/Health',
-    'https://health-ahmadshajee.vercel.app'
+    'https://health-ahmadshajee.vercel.app',
+    'https://medizo.life',
+    'https://www.medizo.life',
+    'http://medizo.life',
+    'http://www.medizo.life'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
