@@ -48,7 +48,7 @@ router.post('/profile/picture', auth, upload.single('profilePicture'), async (re
     }
 
     // Delete old profile picture if exists
-    const user = findUserById(req.user.id);
+    const user = await findUserById(req.user.id);
     if (user && user.profilePicture) {
       const oldPicturePath = path.join(__dirname, '..', user.profilePicture);
       if (fs.existsSync(oldPicturePath)) {
@@ -78,7 +78,7 @@ router.post('/profile/picture', auth, upload.single('profilePicture'), async (re
  */
 router.delete('/profile/picture', auth, async (req, res) => {
   try {
-    const user = findUserById(req.user.id);
+    const user = await findUserById(req.user.id);
     if (user && user.profilePicture) {
       const picturePath = path.join(__dirname, '..', user.profilePicture);
       if (fs.existsSync(picturePath)) {
@@ -154,11 +154,11 @@ router.post('/patients/create', doctor, async (req, res) => {
  * @desc    Get all patients (doctors only)
  * @access  Private (Doctor)
  */
-router.get('/patients', doctor, (req, res) => {
+router.get('/patients', doctor, async (req, res) => {
   console.log('GET /patients endpoint hit');
   console.log('User:', req.user);
   try {
-    const users = getUsers();
+    const users = await getUsers();
     console.log('Total users:', users.length);
     const patients = users
       .filter(user => user.role === 'patient')
@@ -187,9 +187,9 @@ router.get('/patients', doctor, (req, res) => {
  * @desc    Get patients lookup data for prescription creation
  * @access  Private (Doctor)
  */
-router.get('/patients/lookup', doctor, (req, res) => {
+router.get('/patients/lookup', doctor, async (req, res) => {
   try {
-    const users = getUsers();
+    const users = await getUsers();
     const patientsLookup = users
       .filter(user => user.role === 'patient')
       .map(patient => ({
@@ -218,9 +218,9 @@ router.get('/patients/lookup', doctor, (req, res) => {
  * @desc    Get all doctors
  * @access  Private
  */
-router.get('/doctors', auth, (req, res) => {
+router.get('/doctors', auth, async (req, res) => {
   try {
-    const users = getUsers();
+    const users = await getUsers();
     const doctors = users
       .filter(user => user.role === 'doctor')
       .map(doctor => {
@@ -244,9 +244,9 @@ router.get('/doctors', auth, (req, res) => {
  * @desc    Get current user profile
  * @access  Private
  */
-router.get('/profile', auth, (req, res) => {
+router.get('/profile', auth, async (req, res) => {
   try {
-    const user = findUserById(req.user.id);
+    const user = await findUserById(req.user.id);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -318,7 +318,7 @@ router.put('/password', auth, async (req, res) => {
     }
 
     // Verify current password
-    const user = findUserById(req.user.id);
+    const user = await findUserById(req.user.id);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -347,9 +347,9 @@ router.put('/password', auth, async (req, res) => {
  * @desc    Get specific patient by ID (doctors only)
  * @access  Private (Doctor)
  */
-router.get('/patients/:id', doctor, (req, res) => {
+router.get('/patients/:id', doctor, async (req, res) => {
   try {
-    const patient = findUserById(req.params.id);
+    const patient = await findUserById(req.params.id);
     
     if (!patient || patient.role !== 'patient') {
       return res.status(404).json({ message: 'Patient not found' });
@@ -370,7 +370,7 @@ router.get('/patients/:id', doctor, (req, res) => {
  */
 router.put('/patients/:id', doctor, async (req, res) => {
   try {
-    const patient = findUserById(req.params.id);
+    const patient = await findUserById(req.params.id);
     
     if (!patient || patient.role !== 'patient') {
       return res.status(404).json({ message: 'Patient not found' });
@@ -399,10 +399,10 @@ router.put('/patients/:id', doctor, async (req, res) => {
  * @desc    Delete patient (doctors only)
  * @access  Private (Doctor)
  */
-router.delete('/patients/:id', doctor, (req, res) => {
+router.delete('/patients/:id', doctor, async (req, res) => {
   try {
     const { deleteUser } = require('../models/user');
-    const patient = findUserById(req.params.id);
+    const patient = await findUserById(req.params.id);
     
     if (!patient || patient.role !== 'patient') {
       return res.status(404).json({ message: 'Patient not found' });

@@ -11,8 +11,8 @@ const { findPrescriptionsByDoctorId, findPrescriptionsByPatientId } = require('.
  */
 router.get('/', auth, async (req, res) => {
   try {
-    // Get all users
-    const users = getUsers();
+    // Get all users (now async)
+    const users = await getUsers();
     
     // Filter patients only
     const patients = users
@@ -34,7 +34,7 @@ router.get('/', auth, async (req, res) => {
 router.get('/:id', auth, async (req, res) => {
   try {
     const patientId = req.params.id;
-    const patient = findUserById(patientId);
+    const patient = await findUserById(patientId);
     
     if (!patient || patient.role !== 'patient') {
       return res.status(404).json({ message: 'Patient not found' });
@@ -58,7 +58,7 @@ router.get('/:id', auth, async (req, res) => {
 router.get('/profile', patient, async (req, res) => {
   try {
     const patientId = req.user.id;
-    const patient = findUserById(patientId);
+    const patient = await findUserById(patientId);
     
     if (!patient) {
       return res.status(404).json({ message: 'Patient not found' });
@@ -121,7 +121,7 @@ router.get('/doctor/managed', auth, async (req, res) => {
     }
 
     // Get all prescriptions by this doctor
-    const doctorPrescriptions = findPrescriptionsByDoctorId(doctorId);
+    const doctorPrescriptions = await findPrescriptionsByDoctorId(doctorId);
     console.log('Total prescriptions by doctor:', doctorPrescriptions.length);
     
     // Get unique patient IDs from prescriptions
@@ -129,7 +129,7 @@ router.get('/doctor/managed', auth, async (req, res) => {
     console.log('Unique patients:', patientIds.length);
     
     // Get all users
-    const users = getUsers();
+    const users = await getUsers();
     
     // Filter patients managed by this doctor
     const managedPatients = users
@@ -201,14 +201,15 @@ router.get('/:id/medical-details', auth, async (req, res) => {
     }
 
     // Find the patient
-    const patient = findUserById(patientId);
+    const patient = await findUserById(patientId);
     
     if (!patient || patient.role !== 'patient') {
       return res.status(404).json({ message: 'Patient not found' });
     }
 
     // Get all prescriptions for this patient by this doctor
-    const patientPrescriptions = findPrescriptionsByDoctorId(doctorId)
+    const doctorPrescriptions = await findPrescriptionsByDoctorId(doctorId);
+    const patientPrescriptions = doctorPrescriptions
       .filter(p => p.patientId === patientId)
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
@@ -290,7 +291,7 @@ router.put('/:id/medical-info', auth, async (req, res) => {
     const { allergies, medicalHistory, emergencyContact, bloodType, insurance } = req.body;
 
     // Find the patient
-    const patient = findUserById(patientId);
+    const patient = await findUserById(patientId);
     
     if (!patient || patient.role !== 'patient') {
       return res.status(404).json({ message: 'Patient not found' });

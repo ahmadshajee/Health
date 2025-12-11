@@ -28,31 +28,31 @@ router.get('/', auth, async (req, res) => {
     
     // Get prescriptions based on role
     if (role === 'doctor') {
-      prescriptions = findPrescriptionsByDoctorId(userId);
+      prescriptions = await findPrescriptionsByDoctorId(userId);
       console.log('Found', prescriptions.length, 'prescriptions for doctor');
       
       // Enhance with patient information
-      prescriptions = prescriptions.map(prescription => {
-        const patient = findUserById(prescription.patientId);
+      prescriptions = await Promise.all(prescriptions.map(async (prescription) => {
+        const patient = await findUserById(prescription.patientId);
         return {
           ...prescription,
           patientName: patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown Patient',
           patientEmail: patient ? patient.email : 'N/A'
         };
-      });
+      }));
     } else if (role === 'patient') {
-      prescriptions = findPrescriptionsByPatientId(userId);
+      prescriptions = await findPrescriptionsByPatientId(userId);
       console.log('Found', prescriptions.length, 'prescriptions for patient');
       
       // Enhance with doctor information
-      prescriptions = prescriptions.map(prescription => {
-        const doctor = findUserById(prescription.doctorId);
+      prescriptions = await Promise.all(prescriptions.map(async (prescription) => {
+        const doctor = await findUserById(prescription.doctorId);
         return {
           ...prescription,
           doctorName: doctor ? `Dr. ${doctor.firstName} ${doctor.lastName}` : 'Unknown Doctor',
           doctorSpecialization: doctor ? doctor.specialization : 'N/A'
         };
-      });
+      }));
     }
     
     // Sort by creation date (newest first)
@@ -73,7 +73,23 @@ router.get('/', auth, async (req, res) => {
 router.get('/stats', doctor, async (req, res) => {
   try {
     const doctorId = req.user.id;
-    const prescriptions = findPrescriptionsByDoctorId(doctorId);
+    const prescriptions = await findPrescriptionsByDoctorId(doctorId);
+    
+    const recentPrescriptions = await Promise.all(
+      prescriptions
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 5)
+        .map(async (p) => {
+          const patient = await findUserById(p.patientId);
+          return {
+            id: p.id,
+            diagnosis: p.diagnosis,
+            patientName: patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown',
+            createdAt: p.createdAt,
+            status: p.status
+          };
+        })
+    );
     
     const stats = {
       total: prescriptions.length,
@@ -86,19 +102,7 @@ router.get('/stats', doctor, async (req, res) => {
                prescriptionDate.getFullYear() === now.getFullYear();
       }).length,
       uniquePatients: [...new Set(prescriptions.map(p => p.patientId))].length,
-      recentPrescriptions: prescriptions
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, 5)
-        .map(p => {
-          const patient = findUserById(p.patientId);
-          return {
-            id: p.id,
-            diagnosis: p.diagnosis,
-            patientName: patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown',
-            createdAt: p.createdAt,
-            status: p.status
-          };
-        })
+      recentPrescriptions
     };
     
     res.json(stats);
@@ -116,7 +120,7 @@ router.get('/stats', doctor, async (req, res) => {
 router.get('/:id', auth, async (req, res) => {
   try {
     const prescriptionId = req.params.id;
-    const prescription = findPrescriptionById(prescriptionId);
+    const prescription = await findPrescriptionById(prescriptionId);
     
     if (!prescription) {
       return res.status(404).json({ message: 'Prescription not found' });
@@ -160,7 +164,7 @@ router.post('/', doctor, async (req, res) => {
     
     // Resolve patient by id first, then by email (case-insensitive)
     const { getUsers } = require('../models/user');
-    const users = getUsers();
+    const users = await getUsers();
     let patient = null;
 
     if (patientId) {
@@ -204,7 +208,7 @@ router.post('/', doctor, async (req, res) => {
     });
     
     // Get doctor data for email notification
-    const doctor = findUserById(doctorId);
+    const doctor = await findUserById(doctorId);
     
     // Send email notification to patient (optional - don't fail if email fails)
     try {
@@ -230,7 +234,7 @@ router.put('/:id', doctor, async (req, res) => {
   try {
     const prescriptionId = req.params.id;
     const doctorId = req.user.id;
-    const prescription = findPrescriptionById(prescriptionId);
+    const prescription = await findPrescriptionById(prescriptionId);
     
     if (!prescription) {
       return res.status(404).json({ message: 'Prescription not found' });

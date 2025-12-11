@@ -10,8 +10,8 @@ const { doctor } = require('../middleware/auth');
  */
 router.get('/', doctor, async (req, res) => {
   try {
-    // Get all users
-    const users = getUsers();
+    // Get all users (async)
+    const users = await getUsers();
     
     // Filter doctors only
     const doctors = users
@@ -33,7 +33,7 @@ router.get('/', doctor, async (req, res) => {
 router.get('/profile', doctor, async (req, res) => {
   try {
     const doctorId = req.user.id;
-    const doctor = findUserById(doctorId);
+    const doctor = await findUserById(doctorId);
     
     if (!doctor) {
       return res.status(404).json({ message: 'Doctor not found' });

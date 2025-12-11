@@ -21,8 +21,8 @@ const auth = async (req, res, next) => {
     const jwtSecret = process.env.JWT_SECRET || 'healthcare_management_secret_key_2025';
     const decoded = jwt.verify(token, jwtSecret);
     
-    // Get full user data
-    const user = findUserById(decoded.id);
+    // Get full user data (now async)
+    const user = await findUserById(decoded.id);
     if (!user) {
       return res.status(401).json({ message: 'User not found' });
     }
@@ -45,11 +45,11 @@ const auth = async (req, res, next) => {
  * @param {Object} res - Express response object
  * @param {Function} next - Express next middleware function
  */
-const doctor = (req, res, next) => {
+const doctor = async (req, res, next) => {
   // First authenticate user
-  auth(req, res, () => {
+  await auth(req, res, () => {
     // Check if user is a doctor
-    if (req.user.role !== 'doctor') {
+    if (req.user && req.user.role !== 'doctor') {
       return res.status(403).json({ message: 'Access denied: Doctors only' });
     }
     next();
@@ -62,11 +62,11 @@ const doctor = (req, res, next) => {
  * @param {Object} res - Express response object
  * @param {Function} next - Express next middleware function
  */
-const patient = (req, res, next) => {
+const patient = async (req, res, next) => {
   // First authenticate user
-  auth(req, res, () => {
+  await auth(req, res, () => {
     // Check if user is a patient
-    if (req.user.role !== 'patient') {
+    if (req.user && req.user.role !== 'patient') {
       return res.status(403).json({ message: 'Access denied: Patients only' });
     }
     next();
