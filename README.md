@@ -70,6 +70,40 @@ npm install
 npm start
 ```
 
+### Environment Variables
+- `MONGO_URI` (preferred) or `MONGODB_URI`: MongoDB Atlas connection string
+- `JWT_SECRET`: secret used to sign auth tokens
+- `PORT`: optional, defaults to 5000
+- `NODE_ENV`: set to `production` in hosted environments
+
+The backend exposes `/health` for Render health checks and reports whether MongoDB is connected.
+
+### Using MongoDB Atlas (Render / Production)
+- Recommended: set `MONGO_URI` or `MONGODB_URI` as an environment variable in your host (Render, Heroku, etc.).
+- If you cannot set environment variables, you may create a local file `server/config/mongo.json` with this shape (development only):
+
+```json
+{
+  "MONGO_URI": "mongodb+srv://<username>:<password>@cluster0.mongodb.net/<dbname>?retryWrites=true&w=majority"
+}
+```
+
+- A template is provided at `server/config/mongo.example.json`. Do **not** commit `server/config/mongo.json` — it is included in `.gitignore` for safety.
+- After configuring the URI, restart the server — the app will use MongoDB instead of JSON files for persistent storage.
+
+### Migrating existing JSON data into MongoDB
+If you have existing users/prescriptions stored in `server/data/*.json` and want to import them into MongoDB Atlas:
+
+1. Ensure `MONGO_URI` is set (or `server/config/mongo.json` exists).
+2. From the `server` folder run:
+
+```bash
+npm run migrate
+```
+
+3. The script will upsert users by email and import prescriptions while attempting to resolve patient/doctor references. Inspect logs for any skipped records.  
+4. After migration, verify documents in MongoDB Atlas and then you may remove or archive the JSON files (optional).
+
 ## Project Structure
 
 ```

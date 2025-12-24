@@ -31,7 +31,7 @@ const registerUser = async (userData) => {
     }
     
     // Check if user already exists
-    const existingUser = findUserByEmail(email);
+    const existingUser = await findUserByEmail(email);
     if (existingUser) {
       throw new Error('User with this email already exists');
     }

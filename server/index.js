@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
 const morgan = require('morgan');
 const path = require('path');
 const fs = require('fs');
@@ -20,11 +21,12 @@ const { createDemoUsers } = require('./models/user');
 // Initialize express app
 const app = express();
 const PORT = process.env.PORT || 5000;
+let mongoConnected = false;
 
 // Connect to MongoDB and create demo users
 const initializeApp = async () => {
   // Try to connect to MongoDB
-  const mongoConnected = await connectDB();
+  mongoConnected = await connectDB();
   
   if (mongoConnected) {
     console.log('Using MongoDB for data storage');
@@ -94,7 +96,8 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    storage: process.env.MONGODB_URI ? 'mongodb' : 'json'
+    storage: mongoConnected && mongoose.connection.readyState === 1 ? 'mongodb' : 'json',
+    mongoUriConfigured: Boolean(process.env.MONGO_URI || process.env.MONGODB_URI)
   });
 });
 
