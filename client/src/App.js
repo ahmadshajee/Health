@@ -39,7 +39,8 @@ import {
   ListItemText,
   ListItemButton,
   useMediaQuery,
-  useTheme
+  useTheme,
+  keyframes
 } from '@mui/material';
 import { 
   Person as PersonIcon,
@@ -69,6 +70,40 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
   ? 'https://health-8zum.onrender.com'
   : 'http://localhost:5000';
+
+// Beating heart animation for logo
+const beatAnimation = keyframes`
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.15);
+  }
+  40% {
+    transform: scale(1);
+  }
+  60% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+`;
+
+// Beating Logo Component
+const BeatingLogo = ({ size = 80 }) => (
+  <Box
+    component="img"
+    src="/LOGO.png"
+    alt="Medizo Logo"
+    sx={{
+      width: size,
+      height: size,
+      animation: `${beatAnimation} 1.2s ease-in-out infinite`,
+      borderRadius: '8px'
+    }}
+  />
+);
 
 // Create a theme
 const theme = createTheme({
@@ -551,9 +586,9 @@ const AppContent = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress />
-        <Typography variant="h6" sx={{ ml: 2 }}>Loading...</Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: '#f5f5f5' }}>
+        <BeatingLogo size={100} />
+        <Typography variant="h6" sx={{ mt: 2, color: '#134F4D' }}>Loading...</Typography>
       </Box>
     );
   }
@@ -566,8 +601,17 @@ const AppContent = () => {
     <div className="App">
       <AppBar position="static">
         <Toolbar sx={{ justifyContent: 'space-between' }}>
-          {/* Left side - Title */}
+          {/* Left side - Logo and Title */}
           <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+            <img 
+              src="/LOGO.png" 
+              alt="Medizo Logo" 
+              style={{ 
+                height: isMobile ? '28px' : '36px', 
+                marginRight: '8px',
+                borderRadius: '4px'
+              }} 
+            />
             <Typography 
               variant={isMobile ? 'subtitle1' : 'h6'} 
               component="div" 
@@ -878,8 +922,9 @@ const AppContent = () => {
                 {(() => {
                   if (prescriptionsLoading) {
                     return (
-                      <Box display="flex" justifyContent="center" p={4}>
-                        <CircularProgress />
+                      <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" p={4}>
+                        <BeatingLogo size={60} />
+                        <Typography variant="body2" sx={{ mt: 1, color: '#134F4D' }}>Loading prescriptions...</Typography>
                       </Box>
                     );
                   }
