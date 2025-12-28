@@ -1506,6 +1506,7 @@ const AppContent = () => {
                               onChange={(e) => setProfileData(prev => ({ ...prev, habits: { ...prev.habits, smoking: e.target.value } }))}
                               fullWidth
                               SelectProps={{ native: true }}
+                              InputLabelProps={{ shrink: true }}
                             >
                               <option value="">Select...</option>
                               <option value="never">Never</option>
@@ -1522,6 +1523,7 @@ const AppContent = () => {
                               onChange={(e) => setProfileData(prev => ({ ...prev, habits: { ...prev.habits, alcohol: e.target.value } }))}
                               fullWidth
                               SelectProps={{ native: true }}
+                              InputLabelProps={{ shrink: true }}
                             >
                               <option value="">Select...</option>
                               <option value="never">Never</option>
@@ -1538,6 +1540,7 @@ const AppContent = () => {
                               onChange={(e) => setProfileData(prev => ({ ...prev, habits: { ...prev.habits, exercise: e.target.value } }))}
                               fullWidth
                               SelectProps={{ native: true }}
+                              InputLabelProps={{ shrink: true }}
                             >
                               <option value="">Select...</option>
                               <option value="none">None</option>
@@ -1554,6 +1557,7 @@ const AppContent = () => {
                               onChange={(e) => setProfileData(prev => ({ ...prev, habits: { ...prev.habits, diet: e.target.value } }))}
                               fullWidth
                               SelectProps={{ native: true }}
+                              InputLabelProps={{ shrink: true }}
                             >
                               <option value="">Select...</option>
                               <option value="balanced">Balanced</option>
@@ -1571,6 +1575,7 @@ const AppContent = () => {
                               onChange={(e) => setProfileData(prev => ({ ...prev, habits: { ...prev.habits, sleep: e.target.value } }))}
                               fullWidth
                               SelectProps={{ native: true }}
+                              InputLabelProps={{ shrink: true }}
                             >
                               <option value="">Select...</option>
                               <option value="less5">Less than 5 hours</option>
