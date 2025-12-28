@@ -32,10 +32,16 @@ import {
   Alert,
   Snackbar,
   IconButton,
-  TextField
+  TextField,
+  Drawer,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemButton,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import { 
-  LocalHospital as LocalHospitalIcon,
   Person as PersonIcon,
   Assignment as AssignmentIcon,
   Security as SecurityIcon,
@@ -43,7 +49,8 @@ import {
   Cancel as CancelIcon,
   Delete as DeleteIcon,
   Refresh as RefreshIcon,
-  CameraAlt as CameraAltIcon
+  CameraAlt as CameraAltIcon,
+  Menu as MenuIcon
 } from '@mui/icons-material';
 import axios from 'axios';
 
@@ -57,6 +64,11 @@ import PrescriptionList from './components/prescriptions/PrescriptionList';
 
 // Import auth context
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+
+// API Base URL - use Render backend in production, localhost in development
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://health-8zum.onrender.com'
+  : 'http://localhost:5000';
 
 // Create a theme
 const theme = createTheme({
@@ -76,6 +88,11 @@ const AppContent = () => {
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [authTabValue, setAuthTabValue] = useState(0);
   const [activeContent, setActiveContent] = useState('dashboard');
+  
+  // Mobile responsive state
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const muiTheme = useTheme();
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down('sm'));
   
   // Prescription management state
   const [prescriptions, setPrescriptions] = useState([]);
@@ -123,7 +140,7 @@ const AppContent = () => {
   const fetchProfileData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/users/profile', {
+      const response = await axios.get(`${API_BASE_URL}/api/users/profile`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const userData = response.data.user;
@@ -168,7 +185,7 @@ const AppContent = () => {
       formData.append('profilePicture', file);
 
       const token = localStorage.getItem('token');
-      const response = await axios.post('http://localhost:5000/api/users/profile/picture', formData, {
+      const response = await axios.post(`${API_BASE_URL}/api/users/profile/picture`, formData, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
@@ -189,7 +206,7 @@ const AppContent = () => {
     setUploadingPicture(true);
     try {
       const token = localStorage.getItem('token');
-      await axios.delete('http://localhost:5000/api/users/profile/picture', {
+      await axios.delete(`${API_BASE_URL}/api/users/profile/picture`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -206,7 +223,7 @@ const AppContent = () => {
   const fetchLatestPrescription = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/prescriptions', {
+      const response = await axios.get(`${API_BASE_URL}/api/prescriptions`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const prescriptions = response.data;
@@ -227,7 +244,7 @@ const AppContent = () => {
     setProfileLoading(true);
     try {
       const token = localStorage.getItem('token');
-      await axios.put('http://localhost:5000/api/users/profile', 
+      await axios.put(`${API_BASE_URL}/api/users/profile`, 
         { allergies: updatedAllergies },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -247,7 +264,7 @@ const AppContent = () => {
     setProfileLoading(true);
     try {
       const token = localStorage.getItem('token');
-      await axios.put('http://localhost:5000/api/users/profile', 
+      await axios.put(`${API_BASE_URL}/api/users/profile`, 
         { allergies: updatedAllergies },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -265,7 +282,7 @@ const AppContent = () => {
     setProfileLoading(true);
     try {
       const token = localStorage.getItem('token');
-      await axios.put('http://localhost:5000/api/users/profile', 
+      await axios.put(`${API_BASE_URL}/api/users/profile`, 
         { 
           phone: profileData.phone,
           address: profileData.address,
@@ -304,7 +321,7 @@ const AppContent = () => {
     setPrescriptionsLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/prescriptions', {
+      const response = await axios.get(`${API_BASE_URL}/api/prescriptions`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setPrescriptions(response.data);
@@ -320,7 +337,7 @@ const AppContent = () => {
   const handleUpdateStatus = async (prescriptionId, newStatus) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:5000/api/prescriptions/${prescriptionId}`, 
+      await axios.put(`${API_BASE_URL}/api/prescriptions/${prescriptionId}`, 
         { status: newStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -336,7 +353,7 @@ const AppContent = () => {
   const handleDeletePrescription = async (prescriptionId) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/prescriptions/${prescriptionId}`, {
+      await axios.delete(`${API_BASE_URL}/api/prescriptions/${prescriptionId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSnackbar({ open: true, message: 'Prescription deleted successfully', severity: 'success' });
@@ -378,7 +395,7 @@ const AppContent = () => {
     setSecurityLoading(true);
     try {
       const token = localStorage.getItem('token');
-      await axios.put('http://localhost:5000/api/users/profile', 
+      await axios.put(`${API_BASE_URL}/api/users/profile`, 
         { firstName: securityForm.firstName, lastName: securityForm.lastName },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -410,7 +427,7 @@ const AppContent = () => {
     setSecurityLoading(true);
     try {
       const token = localStorage.getItem('token');
-      await axios.put('http://localhost:5000/api/users/password', 
+      await axios.put(`${API_BASE_URL}/api/users/password`, 
         { currentPassword: securityForm.currentPassword, newPassword: securityForm.newPassword },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -439,48 +456,107 @@ const AppContent = () => {
     );
   }
 
+  const handleDrawerToggle = () => {
+    setMobileDrawerOpen(!mobileDrawerOpen);
+  };
+
   return (
     <div className="App">
       <AppBar position="static">
-        <Toolbar>
-          <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
-            <img 
-              src="/logo-medi-vault.svg" 
-              alt="Medi-Vault Logo" 
-              style={{ height: '40px', marginRight: '12px' }}
-              onError={(e) => {
-                // Fallback to icon if logo image not found
-                e.target.style.display = 'none';
-                e.target.nextSibling.style.display = 'inline';
+        <Toolbar sx={{ justifyContent: 'space-between' }}>
+          {/* Left side - Title */}
+          <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+            <Typography 
+              variant={isMobile ? 'subtitle1' : 'h6'} 
+              component="div" 
+              sx={{ 
+                whiteSpace: 'nowrap',
+                fontWeight: 'bold'
               }}
-            />
-            <LocalHospitalIcon sx={{ mr: 1, display: 'none' }} />
+            >
+              Medi-Vault
+            </Typography>
           </Box>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Medi-Vault
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mr: 2, fontSize: '0.875rem' }}>
-            Health on your fingertips
-          </Typography>
-          {isAuthenticated ? (
-            <>
-              <Typography variant="body1" sx={{ mr: 2 }}>
-                Welcome, {(() => {
-                  if (!user) return 'User';
-                  if (user.role === 'doctor') return `Dr. ${user.lastName}`;
-                  return `${user.firstName} ${user.lastName}`;
-                })()}
-              </Typography>
-              <Button color="inherit" onClick={logout}>Logout</Button>
-            </>
+
+          {/* Right side - Auth buttons or user info */}
+          {isMobile ? (
+            // Mobile: Hamburger menu
+            <IconButton
+              color="inherit"
+              aria-label="open menu"
+              edge="end"
+              onClick={handleDrawerToggle}
+            >
+              <MenuIcon />
+            </IconButton>
           ) : (
-            <>
-              <Button color="inherit" onClick={() => handleOpenAuthDialog(0)}>Login</Button>
-              <Button color="inherit" onClick={() => handleOpenAuthDialog(1)}>Register</Button>
-            </>
+            // Desktop: Show buttons inline
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              {isAuthenticated ? (
+                <>
+                  <Typography variant="body1" sx={{ mr: 2, whiteSpace: 'nowrap' }}>
+                    Welcome, {(() => {
+                      if (!user) return 'User';
+                      if (user.role === 'doctor') return `Dr. ${user.lastName}`;
+                      return `${user.firstName} ${user.lastName}`;
+                    })()}
+                  </Typography>
+                  <Button color="inherit" onClick={logout}>Logout</Button>
+                </>
+              ) : (
+                <>
+                  <Button color="inherit" onClick={() => handleOpenAuthDialog(0)}>Login</Button>
+                  <Button color="inherit" onClick={() => handleOpenAuthDialog(1)}>Register</Button>
+                </>
+              )}
+            </Box>
           )}
         </Toolbar>
       </AppBar>
+
+      {/* Mobile Drawer */}
+      <Drawer
+        anchor="right"
+        open={mobileDrawerOpen}
+        onClose={handleDrawerToggle}
+        sx={{
+          display: { xs: 'block', sm: 'none' },
+          '& .MuiDrawer-paper': { width: 250 }
+        }}
+      >
+        <Box sx={{ p: 2, bgcolor: '#134F4D', color: 'white' }}>
+          <Typography variant="h6">Medi-Vault</Typography>
+          <Typography variant="body2" sx={{ opacity: 0.7 }}>Health on your fingertips</Typography>
+        </Box>
+        <List>
+          {isAuthenticated ? (
+            <>
+              <ListItem>
+                <ListItemText 
+                  primary={`Welcome, ${(() => {
+                    if (!user) return 'User';
+                    if (user.role === 'doctor') return `Dr. ${user.lastName}`;
+                    return `${user.firstName} ${user.lastName}`;
+                  })()}`}
+                  sx={{ color: '#134F4D' }}
+                />
+              </ListItem>
+              <ListItemButton onClick={() => { logout(); handleDrawerToggle(); }}>
+                <ListItemText primary="Logout" />
+              </ListItemButton>
+            </>
+          ) : (
+            <>
+              <ListItemButton onClick={() => { handleOpenAuthDialog(0); handleDrawerToggle(); }}>
+                <ListItemText primary="Login" />
+              </ListItemButton>
+              <ListItemButton onClick={() => { handleOpenAuthDialog(1); handleDrawerToggle(); }}>
+                <ListItemText primary="Register" />
+              </ListItemButton>
+            </>
+          )}
+        </List>
+      </Drawer>
 
       {/* Authentication Dialog */}
       <Dialog 
@@ -943,7 +1019,7 @@ const AppContent = () => {
                           <label htmlFor="profile-picture-upload" style={{ cursor: 'pointer' }}>
                             <Avatar 
                               sx={{ width: 150, height: 150, bgcolor: 'primary.main', fontSize: '3rem' }}
-                              src={profileData.profilePicture ? `http://localhost:5000${profileData.profilePicture}` : undefined}
+                              src={profileData.profilePicture ? `${API_BASE_URL}${profileData.profilePicture}` : undefined}
                             >
                               {!profileData.profilePicture && `${profileData.firstName?.charAt(0) || ''}${profileData.lastName?.charAt(0) || ''}`}
                             </Avatar>
