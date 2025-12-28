@@ -580,6 +580,21 @@ const AppContent = () => {
             </Typography>
           </Box>
 
+          {/* Center - Tagline (hidden on mobile) */}
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              color: 'rgba(255,255,255,0.7)', 
+              fontSize: '0.875rem',
+              display: { xs: 'none', md: 'block' },
+              textAlign: 'center',
+              flex: 1,
+              mx: 2
+            }}
+          >
+            Health on your fingertips
+          </Typography>
+
           {/* Right side - Auth buttons or user info */}
           {isMobile ? (
             // Mobile: Hamburger menu
