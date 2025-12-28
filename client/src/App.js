@@ -576,7 +576,7 @@ const AppContent = () => {
                 fontWeight: 'bold'
               }}
             >
-              Medi-Vault
+              Medizo
             </Typography>
           </Box>
 
@@ -642,7 +642,7 @@ const AppContent = () => {
         }}
       >
         <Box sx={{ p: 2, bgcolor: '#134F4D', color: 'white' }}>
-          <Typography variant="h6">Medi-Vault</Typography>
+          <Typography variant="h6">Medizo</Typography>
           <Typography variant="body2" sx={{ opacity: 0.7 }}>Health on your fingertips</Typography>
         </Box>
         <List>
@@ -1740,7 +1740,7 @@ const AppContent = () => {
         
         <Box sx={{ mt: 8, mb: 4, textAlign: 'center' }}>
           <Typography variant="body2" color="text.secondary">
-            © {new Date().getFullYear()} Medi-Vault. Health on your fingertips. All rights reserved.
+            © {new Date().getFullYear()} Medizo. Health on your fingertips. All rights reserved.
           </Typography>
         </Box>
       </Container>

@@ -389,7 +389,7 @@ router.get('/:id/download', auth, async (req, res) => {
     
     // Clinic info (right side)
     doc.fillColor(primaryColor).fontSize(14).font('Helvetica-Bold')
-       .text('Medi-Vault', 400, 40, { align: 'right' });
+       .text('Medizo', 400, 40, { align: 'right' });
     doc.fillColor(textColor).fontSize(9).font('Helvetica');
     doc.text('Digital Prescription Service', 400, 56, { align: 'right' });
     doc.text('Health on your fingertips', 400, 68, { align: 'right' });
@@ -620,7 +620,7 @@ router.get('/:id/download', auth, async (req, res) => {
     
     // ============ FOOTER ============
     doc.fontSize(8).fillColor(lightGray)
-       .text('This is a digitally generated prescription from Medi-Vault', 40, 780, { align: 'center', width: 515 });
+       .text('This is a digitally generated prescription from Medizo', 40, 780, { align: 'center', width: 515 });
     doc.text(`Generated: ${new Date().toLocaleString()}`, 40, 790, { align: 'center', width: 515 });
     
     // Finalize the PDF

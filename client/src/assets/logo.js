@@ -1,3 +1,3 @@
-// This file serves as a placeholder for the Medi-Vault logo
+// This file serves as a placeholder for the Medizo logo
 // The actual logo image should be placed in the public folder
-export const logoPath = '/logo-medi-vault.png';
+export const logoPath = '/logo-medizo.png';
