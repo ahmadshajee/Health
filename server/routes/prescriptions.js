@@ -318,22 +318,29 @@ router.get('/:id/download', auth, async (req, res) => {
     const userId = req.user.id;
     const role = req.user.role;
     
-    const prescription = findPrescriptionById(prescriptionId);
+    const prescription = await findPrescriptionById(prescriptionId);
+    
+    console.log('Download request - Prescription found:', prescription ? 'yes' : 'no');
     
     if (!prescription) {
       return res.status(404).json({ message: 'Prescription not found' });
     }
     
-    // Check access permissions
-    if (role === 'patient' && prescription.patientId !== userId) {
+    // Check access permissions - convert to strings for comparison
+    const prescPatientId = prescription.patientId?.toString() || prescription.patientId;
+    const prescDoctorId = prescription.doctorId?.toString() || prescription.doctorId;
+    
+    console.log('Download access check:', { userId, role, prescPatientId, prescDoctorId });
+    
+    if (role === 'patient' && prescPatientId !== userId) {
       return res.status(403).json({ message: 'Access denied' });
-    } else if (role === 'doctor' && prescription.doctorId !== userId) {
+    } else if (role === 'doctor' && prescDoctorId !== userId) {
       return res.status(403).json({ message: 'Access denied' });
     }
     
     // Get patient and doctor details
-    const patient = findUserById(prescription.patientId);
-    const doctor = findUserById(prescription.doctorId);
+    const patient = await findUserById(prescription.patientId);
+    const doctor = await findUserById(prescription.doctorId);
     
     if (!patient || !doctor) {
       return res.status(500).json({ message: 'Failed to retrieve user information' });
@@ -341,10 +348,12 @@ router.get('/:id/download', auth, async (req, res) => {
     
     // Generate PDF
     const PDFDocument = require('pdfkit');
-    const fs = require('fs');
-    const path = require('path');
+    const QRCode = require('qrcode');
     
-    const doc = new PDFDocument({ margin: 50 });
+    const doc = new PDFDocument({ 
+      margin: 40,
+      size: 'A4'
+    });
     
     // Set response headers for PDF download
     res.setHeader('Content-Type', 'application/pdf');
@@ -353,146 +362,266 @@ router.get('/:id/download', auth, async (req, res) => {
     // Pipe the PDF to the response
     doc.pipe(res);
     
-    // Add header
-    doc.fontSize(20).text('MEDI-VAULT', 50, 50);
-    doc.fontSize(16).text('Medical Prescription', 50, 80);
-    doc.moveTo(50, 100).lineTo(550, 100).stroke();
+    // Colors
+    const primaryColor = '#134F4D';
+    const textColor = '#333333';
+    const lightGray = '#666666';
     
-    // Add prescription details
-    let yPosition = 130;
+    // ============ HEADER SECTION ============
+    // Doctor info (left side)
+    doc.fillColor(primaryColor).fontSize(16).font('Helvetica-Bold')
+       .text(`Dr. ${doctor.firstName} ${doctor.lastName}`, 40, 40);
     
-    doc.fontSize(12).text(`Prescription ID: ${prescription.id}`, 50, yPosition);
-    yPosition += 20;
-    doc.text(`Date: ${new Date(prescription.date).toLocaleDateString()}`, 50, yPosition);
-    yPosition += 30;
-    
-    // Patient information
-    doc.fontSize(14).text('Patient Information:', 50, yPosition);
-    yPosition += 20;
-    doc.fontSize(12).text(`Name: ${patient.firstName} ${patient.lastName}`, 70, yPosition);
-    yPosition += 15;
-    doc.text(`Email: ${patient.email}`, 70, yPosition);
-    yPosition += 15;
-    if (patient.dateOfBirth) {
-      doc.text(`Date of Birth: ${new Date(patient.dateOfBirth).toLocaleDateString()}`, 70, yPosition);
-      yPosition += 15;
-    }
-    if (patient.contactNumber) {
-      doc.text(`Contact: ${patient.contactNumber}`, 70, yPosition);
-      yPosition += 15;
-    }
-    yPosition += 20;
-    
-    // Doctor information
-    doc.fontSize(14).text('Prescribed By:', 50, yPosition);
-    yPosition += 20;
-    doc.fontSize(12).text(`Dr. ${doctor.firstName} ${doctor.lastName}`, 70, yPosition);
-    yPosition += 15;
+    doc.fillColor(textColor).fontSize(10).font('Helvetica');
+    let headerY = 58;
     if (doctor.specialization) {
-      doc.text(`Specialization: ${doctor.specialization}`, 70, yPosition);
-      yPosition += 15;
+      doc.text(`${doctor.specialization}`, 40, headerY);
+      headerY += 12;
     }
-    doc.text(`Contact: ${doctor.contactNumber}`, 70, yPosition);
-    yPosition += 30;
+    if (doctor.registrationNumber) {
+      doc.text(`Reg. No: ${doctor.registrationNumber}`, 40, headerY);
+      headerY += 12;
+    }
+    if (doctor.contactNumber || doctor.phone) {
+      doc.text(`Mob. No: ${doctor.contactNumber || doctor.phone}`, 40, headerY);
+      headerY += 12;
+    }
     
-    // Diagnosis
-    doc.fontSize(14).text('Diagnosis:', 50, yPosition);
-    yPosition += 20;
-    doc.fontSize(12).text(prescription.diagnosis, 70, yPosition);
-    yPosition += 30;
+    // Clinic info (right side)
+    doc.fillColor(primaryColor).fontSize(14).font('Helvetica-Bold')
+       .text('Medi-Vault', 400, 40, { align: 'right' });
+    doc.fillColor(textColor).fontSize(9).font('Helvetica');
+    doc.text('Digital Prescription Service', 400, 56, { align: 'right' });
+    doc.text('Health on your fingertips', 400, 68, { align: 'right' });
     
-    // Medications
-    doc.fontSize(14).text('Medications:', 50, yPosition);
-    yPosition += 20;
+    // Header line
+    doc.moveTo(40, 95).lineTo(555, 95).strokeColor(primaryColor).lineWidth(2).stroke();
     
-    prescription.medications.forEach((med, index) => {
-      doc.fontSize(12).text(`${index + 1}. ${med.name}`, 70, yPosition);
-      yPosition += 15;
-      doc.text(`   Dosage: ${med.dosage}`, 70, yPosition);
-      yPosition += 15;
-      doc.text(`   Frequency: ${med.frequency}`, 70, yPosition);
-      yPosition += 15;
-      doc.text(`   Duration: ${med.duration}`, 70, yPosition);
-      yPosition += 20;
+    // ============ DATE & PRESCRIPTION ID ============
+    let yPos = 110;
+    
+    // Prescription ID (barcode-style) on left
+    doc.fillColor(textColor).fontSize(10).font('Helvetica-Bold')
+       .text(`ID: ${prescriptionId.substring(0, 12).toUpperCase()}`, 40, yPos);
+    
+    // Date on right
+    const prescDate = prescription.createdAt ? new Date(prescription.createdAt) : new Date();
+    const formattedDate = prescDate.toLocaleDateString('en-GB', { 
+      day: '2-digit', month: 'short', year: 'numeric' 
     });
+    const formattedTime = prescDate.toLocaleTimeString('en-US', { 
+      hour: '2-digit', minute: '2-digit', hour12: true 
+    });
+    doc.fillColor(primaryColor).fontSize(11).font('Helvetica-Bold')
+       .text(`Date: ${formattedDate}, ${formattedTime}`, 400, yPos, { align: 'right' });
     
-    // Instructions
-    if (prescription.instructions) {
-      doc.fontSize(14).text('Instructions:', 50, yPosition);
-      yPosition += 20;
-      doc.fontSize(12).text(prescription.instructions, 70, yPosition, { width: 450 });
-      yPosition += 40;
+    yPos += 25;
+    
+    // ============ PATIENT INFORMATION ============
+    // Patient name, gender, age
+    const patientAge = patient.dateOfBirth ? 
+      Math.floor((new Date() - new Date(patient.dateOfBirth)) / (365.25 * 24 * 60 * 60 * 1000)) + ' Y' : '';
+    const patientGender = patient.gender ? `(${patient.gender.charAt(0).toUpperCase()})` : '';
+    
+    doc.fillColor(textColor).fontSize(11).font('Helvetica-Bold')
+       .text(`Patient: ${patient.firstName} ${patient.lastName} ${patientGender} ${patientAge ? '/ ' + patientAge : ''}`, 40, yPos);
+    yPos += 15;
+    
+    // Address
+    if (patient.address) {
+      doc.font('Helvetica').fontSize(10)
+         .text(`Address: ${patient.address}`, 40, yPos);
+      yPos += 12;
     }
     
-    // Follow-up date
-    if (prescription.followUpDate) {
-      doc.fontSize(12).text(`Follow-up Date: ${new Date(prescription.followUpDate).toLocaleDateString()}`, 50, yPosition);
-      yPosition += 30;
+    // Contact
+    if (patient.contactNumber || patient.phone) {
+      doc.text(`Contact: ${patient.contactNumber || patient.phone}`, 40, yPos);
+      yPos += 12;
     }
     
-    // Add QR code section
-    doc.fontSize(12).text('QR Code for Verification:', 50, yPosition);
-    yPosition += 25;
+    // Vitals (if available)
+    let vitalsText = '';
+    if (patient.weight) vitalsText += `Weight: ${patient.weight}kg  `;
+    if (patient.height) vitalsText += `Height: ${patient.height}cm  `;
+    if (patient.bloodPressure) vitalsText += `BP: ${patient.bloodPressure}  `;
+    if (patient.bloodType) vitalsText += `Blood Type: ${patient.bloodType}`;
     
-    // Generate QR code if not available
-    if (!prescription.qrCode) {
-      console.log('Generating QR code for prescription:', prescription.id);
-      try {
-        const QRCode = require('qrcode');
-        const qrData = JSON.stringify({
-          id: prescription.id,
-          doctorId: prescription.doctorId,
-          patientId: prescription.patientId,
-          createdAt: prescription.createdAt
+    if (vitalsText) {
+      doc.text(vitalsText, 40, yPos);
+      yPos += 12;
+    }
+    
+    yPos += 8;
+    doc.moveTo(40, yPos).lineTo(555, yPos).strokeColor('#cccccc').lineWidth(0.5).stroke();
+    yPos += 15;
+    
+    // ============ KNOWN HISTORY (Allergies) ============
+    const allergies = patient.allergies;
+    let allergyList = [];
+    if (allergies) {
+      if (typeof allergies === 'object' && !Array.isArray(allergies)) {
+        // New categorized format
+        Object.values(allergies).forEach(arr => {
+          if (Array.isArray(arr)) allergyList = allergyList.concat(arr);
         });
-        prescription.qrCode = await QRCode.toDataURL(qrData);
-        console.log('QR code generated successfully');
-      } catch (error) {
-        console.error('Error generating QR code:', error);
+      } else if (Array.isArray(allergies)) {
+        allergyList = allergies;
       }
-    }
-
-    // Add the actual QR code image if available
-    if (prescription.qrCode) {
-      try {
-        console.log('Adding QR code to PDF for prescription:', prescription.id);
-        console.log('QR code length:', prescription.qrCode.length);
-        
-        // Convert base64 QR code to buffer and embed in PDF
-        const base64Data = prescription.qrCode.replace(/^data:image\/png;base64,/, '');
-        const qrCodeBuffer = Buffer.from(base64Data, 'base64');
-        
-        console.log('QR code buffer size:', qrCodeBuffer.length);
-        
-        // Add QR code image to PDF
-        doc.image(qrCodeBuffer, 50, yPosition, { width: 100, height: 100 });
-        
-        // Add QR code description next to the image
-        doc.fontSize(10).text('Scan this QR code to verify prescription authenticity', 170, yPosition + 20, { width: 300 });
-        doc.text(`Prescription ID: ${prescription.id}`, 170, yPosition + 40);
-        doc.text(`Generated: ${new Date(prescription.createdAt).toLocaleDateString()}`, 170, yPosition + 55);
-        
-        yPosition += 120;
-        console.log('QR code successfully added to PDF');
-      } catch (error) {
-        console.error('Error adding QR code to PDF:', error);
-        console.error('QR code data preview:', prescription.qrCode ? prescription.qrCode.substring(0, 100) + '...' : 'No QR code');
-        
-        // Fallback to text if QR code image fails
-        doc.text(`QR Code Error - Verification Code: RX-${prescription.id}`, 50, yPosition);
-        doc.text(`Contact support with prescription ID: ${prescription.id}`, 50, yPosition + 15);
-        yPosition += 40;
-      }
-    } else {
-      console.log('No QR code available for prescription:', prescription.id);
-      // Fallback if no QR code available
-      doc.text(`No QR Code Available - Verification Code: RX-${prescription.id}`, 50, yPosition);
-      yPosition += 25;
     }
     
-    // Footer
-    doc.fontSize(10).text('This prescription is digitally generated and verified.', 50, 750);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 50, 765);
+    if (allergyList.length > 0) {
+      doc.fillColor(textColor).fontSize(10).font('Helvetica-Bold')
+         .text('Known History / Allergies:', 40, yPos);
+      yPos += 12;
+      doc.font('Helvetica').fontSize(10);
+      allergyList.forEach(allergy => {
+        doc.text(`* ${allergy}`, 50, yPos);
+        yPos += 11;
+      });
+      yPos += 5;
+    }
+    
+    // ============ DIAGNOSIS ============
+    doc.fillColor(textColor).fontSize(11).font('Helvetica-Bold')
+       .text('Diagnosis:', 40, yPos);
+    yPos += 14;
+    doc.fillColor(primaryColor).font('Helvetica').fontSize(11)
+       .text(`* ${prescription.diagnosis || 'Not specified'}`, 50, yPos);
+    yPos += 20;
+    
+    // ============ Rx SYMBOL & MEDICATIONS ============
+    // Draw Rx symbol
+    doc.fillColor(primaryColor).fontSize(24).font('Helvetica-Bold')
+       .text('℞', 40, yPos);
+    yPos += 30;
+    
+    // Medications table header
+    doc.fillColor('#ffffff').rect(40, yPos, 515, 20).fill(primaryColor);
+    doc.fillColor('#ffffff').fontSize(10).font('Helvetica-Bold');
+    doc.text('Medicine Name', 50, yPos + 5);
+    doc.text('Dosage', 280, yPos + 5);
+    doc.text('Duration', 420, yPos + 5);
+    yPos += 25;
+    
+    // Medications list
+    if (prescription.medications && prescription.medications.length > 0) {
+      doc.fillColor(textColor).font('Helvetica').fontSize(10);
+      prescription.medications.forEach((med, index) => {
+        // Check if we need a new page
+        if (yPos > 650) {
+          doc.addPage();
+          yPos = 50;
+        }
+        
+        // Alternate row background
+        if (index % 2 === 0) {
+          doc.fillColor('#f5f5f5').rect(40, yPos - 3, 515, 35).fill();
+        }
+        
+        // Medicine type prefix
+        const medType = med.type === 'capsule' ? 'CAP.' : 
+                       med.type === 'tablet' ? 'TAB.' : 
+                       med.type === 'syrup' ? 'SYR.' : 
+                       med.type === 'injection' ? 'INJ.' : '';
+        
+        doc.fillColor(textColor).font('Helvetica-Bold').fontSize(10);
+        doc.text(`${index + 1}) ${medType} ${med.name}`.toUpperCase(), 50, yPos);
+        
+        doc.font('Helvetica').fontSize(9);
+        // Dosage info
+        let dosageInfo = '';
+        if (med.dosage) dosageInfo += med.dosage;
+        if (med.frequency) dosageInfo += ` - ${med.frequency}`;
+        if (med.timing) dosageInfo += ` (${med.timing})`;
+        doc.text(dosageInfo || 'As directed', 280, yPos);
+        
+        // Duration
+        let durationInfo = med.duration || '';
+        if (med.totalCount) durationInfo += ` (Tot: ${med.totalCount})`;
+        doc.text(durationInfo || '-', 420, yPos);
+        
+        yPos += 35;
+      });
+    } else {
+      doc.fillColor(lightGray).text('No medications specified', 50, yPos);
+      yPos += 20;
+    }
+    
+    yPos += 10;
+    
+    // ============ INVESTIGATIONS ============
+    if (prescription.investigations) {
+      doc.fillColor(textColor).fontSize(10).font('Helvetica-Bold')
+         .text('Investigations:', 40, yPos);
+      yPos += 12;
+      doc.font('Helvetica').fontSize(10);
+      const investigations = prescription.investigations.split(',').map(i => i.trim());
+      investigations.forEach(inv => {
+        if (inv) {
+          doc.text(`* ${inv}`, 50, yPos);
+          yPos += 11;
+        }
+      });
+      yPos += 8;
+    }
+    
+    // ============ SPECIAL INSTRUCTIONS / ADVICE ============
+    if (prescription.instructions) {
+      doc.fillColor(textColor).fontSize(10).font('Helvetica-Bold')
+         .text('Advice Given:', 40, yPos);
+      yPos += 12;
+      doc.font('Helvetica').fontSize(10)
+         .text(`* ${prescription.instructions}`, 50, yPos, { width: 480 });
+      yPos += 25;
+    }
+    
+    // ============ FOLLOW-UP DATE ============
+    if (prescription.followUpDate) {
+      const followUp = new Date(prescription.followUpDate);
+      const followUpFormatted = followUp.toLocaleDateString('en-GB', { 
+        day: '2-digit', month: 'long', year: 'numeric' 
+      });
+      doc.fillColor(primaryColor).fontSize(11).font('Helvetica-Bold')
+         .text(`Follow Up: ${followUpFormatted}`, 40, yPos);
+      yPos += 25;
+    }
+    
+    // ============ SIGNATURE ============
+    doc.fillColor(textColor).fontSize(12).font('Helvetica-Oblique')
+       .text('Signature', 450, yPos + 20, { align: 'right' });
+    doc.moveTo(400, yPos + 35).lineTo(555, yPos + 35).strokeColor('#333333').lineWidth(0.5).stroke();
+    doc.fontSize(10).font('Helvetica')
+       .text(`Dr. ${doctor.firstName} ${doctor.lastName}`, 400, yPos + 40, { align: 'right' });
+    
+    // ============ QR CODE ============
+    // Generate QR code
+    try {
+      const qrData = JSON.stringify({
+        id: prescription.id || prescriptionId,
+        doctor: `Dr. ${doctor.firstName} ${doctor.lastName}`,
+        patient: `${patient.firstName} ${patient.lastName}`,
+        date: prescDate.toISOString(),
+        diagnosis: prescription.diagnosis
+      });
+      
+      const qrCodeDataUrl = await QRCode.toDataURL(qrData, { width: 80, margin: 1 });
+      const base64Data = qrCodeDataUrl.replace(/^data:image\/png;base64,/, '');
+      const qrCodeBuffer = Buffer.from(base64Data, 'base64');
+      
+      // Position QR code at bottom left
+      const qrY = Math.max(yPos + 60, 700);
+      doc.image(qrCodeBuffer, 40, qrY, { width: 70, height: 70 });
+      doc.fontSize(8).fillColor(lightGray)
+         .text('Scan to verify', 40, qrY + 72, { width: 70, align: 'center' });
+    } catch (qrError) {
+      console.error('Error generating QR code:', qrError);
+    }
+    
+    // ============ FOOTER ============
+    doc.fontSize(8).fillColor(lightGray)
+       .text('This is a digitally generated prescription from Medi-Vault', 40, 780, { align: 'center', width: 515 });
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 40, 790, { align: 'center', width: 515 });
     
     // Finalize the PDF
     doc.end();
