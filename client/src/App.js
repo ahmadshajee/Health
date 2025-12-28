@@ -111,6 +111,7 @@ const AppContent = () => {
   const [securityLoading, setSecurityLoading] = useState(false);
 
   // Profile state
+  const [profileTab, setProfileTab] = useState(0); // 0: Personal, 1: Allergies, 2: History, 3: Habits
   const [profileData, setProfileData] = useState({
     firstName: '',
     lastName: '',
@@ -120,11 +121,27 @@ const AppContent = () => {
     dateOfBirth: '',
     bloodType: '',
     gender: '',
-    allergies: [],
+    allergies: {
+      environmental: [],
+      food: [],
+      drugs: [],
+      other: []
+    },
+    diseaseHistory: [],
+    habits: {
+      smoking: '',
+      alcohol: '',
+      exercise: '',
+      diet: '',
+      sleep: '',
+      other: ''
+    },
     emergencyContact: { name: '', relationship: '', phone: '' },
     profilePicture: null
   });
   const [newAllergy, setNewAllergy] = useState('');
+  const [allergyCategory, setAllergyCategory] = useState('environmental');
+  const [newDiseaseHistory, setNewDiseaseHistory] = useState({ disease: '', diagnosedDate: '', notes: '' });
   const [latestPrescription, setLatestPrescription] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [uploadingPicture, setUploadingPicture] = useState(false);
@@ -144,6 +161,21 @@ const AppContent = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       const userData = response.data.user;
+      
+      // Handle allergies - convert from array to categorized object if needed
+      let allergiesData = userData.allergies;
+      if (Array.isArray(allergiesData)) {
+        // Legacy format - convert to new categorized format
+        allergiesData = {
+          environmental: [],
+          food: [],
+          drugs: [],
+          other: allergiesData
+        };
+      } else if (!allergiesData) {
+        allergiesData = { environmental: [], food: [], drugs: [], other: [] };
+      }
+      
       setProfileData({
         firstName: userData.firstName || '',
         lastName: userData.lastName || '',
@@ -153,7 +185,9 @@ const AppContent = () => {
         dateOfBirth: userData.dateOfBirth || '',
         bloodType: userData.bloodType || '',
         gender: userData.gender || '',
-        allergies: userData.allergies || [],
+        allergies: allergiesData,
+        diseaseHistory: userData.diseaseHistory || [],
+        habits: userData.habits || { smoking: '', alcohol: '', exercise: '', diet: '', sleep: '', other: '' },
         emergencyContact: userData.emergencyContact || { name: '', relationship: '', phone: '' },
         profilePicture: userData.profilePicture || null
       });
@@ -237,10 +271,13 @@ const AppContent = () => {
     }
   };
 
-  const handleAddAllergy = async () => {
+  const handleAddAllergy = async (category) => {
     if (!newAllergy.trim()) return;
     
-    const updatedAllergies = [...profileData.allergies, newAllergy.trim()];
+    const updatedAllergies = {
+      ...profileData.allergies,
+      [category]: [...(profileData.allergies[category] || []), newAllergy.trim()]
+    };
     setProfileLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -259,8 +296,11 @@ const AppContent = () => {
     }
   };
 
-  const handleRemoveAllergy = async (allergyToRemove) => {
-    const updatedAllergies = profileData.allergies.filter(a => a !== allergyToRemove);
+  const handleRemoveAllergy = async (category, allergyToRemove) => {
+    const updatedAllergies = {
+      ...profileData.allergies,
+      [category]: profileData.allergies[category].filter(a => a !== allergyToRemove)
+    };
     setProfileLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -273,6 +313,68 @@ const AppContent = () => {
     } catch (error) {
       console.error('Error removing allergy:', error);
       setSnackbar({ open: true, message: 'Failed to remove allergy', severity: 'error' });
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const handleAddDiseaseHistory = async () => {
+    if (!newDiseaseHistory.disease.trim()) return;
+    
+    const updatedHistory = [...(profileData.diseaseHistory || []), {
+      ...newDiseaseHistory,
+      id: Date.now(),
+      addedAt: new Date().toISOString()
+    }];
+    setProfileLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_BASE_URL}/api/users/profile`, 
+        { diseaseHistory: updatedHistory },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setProfileData(prev => ({ ...prev, diseaseHistory: updatedHistory }));
+      setNewDiseaseHistory({ disease: '', diagnosedDate: '', notes: '' });
+      setSnackbar({ open: true, message: 'Disease history added', severity: 'success' });
+    } catch (error) {
+      console.error('Error adding disease history:', error);
+      setSnackbar({ open: true, message: 'Failed to add disease history', severity: 'error' });
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const handleRemoveDiseaseHistory = async (historyId) => {
+    const updatedHistory = profileData.diseaseHistory.filter(h => h.id !== historyId);
+    setProfileLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_BASE_URL}/api/users/profile`, 
+        { diseaseHistory: updatedHistory },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setProfileData(prev => ({ ...prev, diseaseHistory: updatedHistory }));
+      setSnackbar({ open: true, message: 'Disease history removed', severity: 'success' });
+    } catch (error) {
+      console.error('Error removing disease history:', error);
+      setSnackbar({ open: true, message: 'Failed to remove disease history', severity: 'error' });
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const handleUpdateHabits = async () => {
+    setProfileLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_BASE_URL}/api/users/profile`, 
+        { habits: profileData.habits },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSnackbar({ open: true, message: 'Habits updated successfully', severity: 'success' });
+    } catch (error) {
+      console.error('Error updating habits:', error);
+      setSnackbar({ open: true, message: 'Failed to update habits', severity: 'error' });
     } finally {
       setProfileLoading(false);
     }
@@ -984,280 +1086,523 @@ const AppContent = () => {
             )}
             
             {activeContent === 'profile' && (
-              <Box sx={{ maxWidth: 800, mx: 'auto', mt: 4 }}>
-                <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
-                  User Profile
+              <Box sx={{ maxWidth: 900, mx: 'auto', mt: 4 }}>
+                <Typography variant="h5" gutterBottom sx={{ mb: 1 }}>
+                  My Profile
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                  Update your personal information and contact details.
                 </Typography>
 
-                {/* Personal Information with Profile Picture */}
-                <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-                  <Typography variant="h6" gutterBottom color="primary">
-                    Personal Information
-                  </Typography>
-                  <Grid container spacing={3} alignItems="center">
-                    <Grid item xs={12} md={4}>
-                      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                        <Box
-                          sx={{
-                            position: 'relative',
-                            width: 150,
-                            height: 150,
-                            borderRadius: '50%',
-                            cursor: 'pointer',
-                            '&:hover .hover-overlay': {
-                              opacity: 1,
-                            },
-                          }}
-                        >
-                          <input
-                            accept="image/jpeg,image/jpg,image/png,image/gif"
-                            style={{ display: 'none' }}
-                            id="profile-picture-upload"
-                            type="file"
-                            onChange={handleProfilePictureUpload}
-                          />
-                          <label htmlFor="profile-picture-upload" style={{ cursor: 'pointer' }}>
-                            <Avatar 
-                              sx={{ width: 150, height: 150, bgcolor: 'primary.main', fontSize: '3rem' }}
-                              src={profileData.profilePicture ? `${API_BASE_URL}${profileData.profilePicture}` : undefined}
-                            >
-                              {!profileData.profilePicture && `${profileData.firstName?.charAt(0) || ''}${profileData.lastName?.charAt(0) || ''}`}
-                            </Avatar>
-                            <Box
-                              className="hover-overlay"
-                              sx={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                height: '100%',
-                                borderRadius: '50%',
-                                bgcolor: 'rgba(0, 0, 0, 0.6)',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                opacity: 0,
-                                transition: 'opacity 0.3s ease',
-                              }}
-                            >
-                              {uploadingPicture ? (
-                                <CircularProgress size={30} sx={{ color: 'white' }} />
-                              ) : (
-                                <>
-                                  <CameraAltIcon sx={{ color: 'white', fontSize: 32 }} />
-                                  <Typography variant="caption" sx={{ color: 'white', mt: 0.5 }}>
-                                    {profileData.profilePicture ? 'Change Photo' : 'Upload Photo'}
-                                  </Typography>
-                                </>
-                              )}
+                {/* Profile Tabs */}
+                <Paper elevation={2} sx={{ mb: 3 }}>
+                  <Tabs 
+                    value={profileTab} 
+                    onChange={(e, newValue) => setProfileTab(newValue)}
+                    variant="fullWidth"
+                    sx={{ borderBottom: 1, borderColor: 'divider' }}
+                  >
+                    <Tab label="PERSONAL" />
+                    <Tab label="ALLERGIES" />
+                    <Tab label="HISTORY" />
+                    <Tab label="HABITS" />
+                  </Tabs>
+
+                  <Box sx={{ p: 3 }}>
+                    {/* PERSONAL Tab */}
+                    {profileTab === 0 && (
+                      <>
+                        {/* Profile Picture and Basic Info */}
+                        <Grid container spacing={3} alignItems="center" sx={{ mb: 4 }}>
+                          <Grid item xs={12} md={4}>
+                            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                              <Box
+                                sx={{
+                                  position: 'relative',
+                                  width: 150,
+                                  height: 150,
+                                  borderRadius: '50%',
+                                  cursor: 'pointer',
+                                  '&:hover .hover-overlay': { opacity: 1 },
+                                }}
+                              >
+                                <input
+                                  accept="image/jpeg,image/jpg,image/png,image/gif"
+                                  style={{ display: 'none' }}
+                                  id="profile-picture-upload"
+                                  type="file"
+                                  onChange={handleProfilePictureUpload}
+                                />
+                                <label htmlFor="profile-picture-upload" style={{ cursor: 'pointer' }}>
+                                  <Avatar 
+                                    sx={{ width: 150, height: 150, bgcolor: 'primary.main', fontSize: '3rem' }}
+                                    src={profileData.profilePicture ? `${API_BASE_URL}${profileData.profilePicture}` : undefined}
+                                  >
+                                    {!profileData.profilePicture && `${profileData.firstName?.charAt(0) || ''}${profileData.lastName?.charAt(0) || ''}`}
+                                  </Avatar>
+                                  <Box
+                                    className="hover-overlay"
+                                    sx={{
+                                      position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                                      borderRadius: '50%', bgcolor: 'rgba(0, 0, 0, 0.6)',
+                                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                      opacity: 0, transition: 'opacity 0.3s ease',
+                                    }}
+                                  >
+                                    {uploadingPicture ? (
+                                      <CircularProgress size={30} sx={{ color: 'white' }} />
+                                    ) : (
+                                      <>
+                                        <CameraAltIcon sx={{ color: 'white', fontSize: 32 }} />
+                                        <Typography variant="caption" sx={{ color: 'white', mt: 0.5 }}>
+                                          {profileData.profilePicture ? 'Change Photo' : 'Upload Photo'}
+                                        </Typography>
+                                      </>
+                                    )}
+                                  </Box>
+                                </label>
+                              </Box>
                             </Box>
-                          </label>
-                        </Box>
-                      </Box>
-                      {profileData.profilePicture && (
-                        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
-                          <Button
-                            variant="text"
-                            color="error"
-                            size="small"
-                            onClick={handleDeleteProfilePicture}
-                            disabled={uploadingPicture}
-                          >
-                            Remove Photo
+                            {profileData.profilePicture && (
+                              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
+                                <Button variant="text" color="error" size="small" onClick={handleDeleteProfilePicture} disabled={uploadingPicture}>
+                                  Remove Photo
+                                </Button>
+                              </Box>
+                            )}
+                          </Grid>
+                          <Grid item xs={12} md={8}>
+                            <Box sx={{ mb: 2 }}>
+                              <Typography variant="h4" sx={{ fontWeight: 500 }}>
+                                {profileData.firstName} {profileData.lastName}
+                              </Typography>
+                              <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>
+                                {profileData.email}
+                              </Typography>
+                              <Chip label={user?.role === 'doctor' ? 'Doctor' : 'Patient'} size="small" color="primary" sx={{ mt: 1 }} />
+                            </Box>
+                            <Grid container spacing={2} sx={{ mt: 1 }}>
+                              <Grid item xs={6}>
+                                <Typography variant="body2" color="text.secondary">Date of Birth</Typography>
+                                <Typography variant="body1">{profileData.dateOfBirth || 'Not set'}</Typography>
+                              </Grid>
+                              <Grid item xs={6}>
+                                <Typography variant="body2" color="text.secondary">Gender</Typography>
+                                <Typography variant="body1" sx={{ textTransform: 'capitalize' }}>{profileData.gender || 'Not set'}</Typography>
+                              </Grid>
+                              <Grid item xs={6}>
+                                <Typography variant="body2" color="text.secondary">Blood Type</Typography>
+                                <Typography variant="body1">{profileData.bloodType || 'Not set'}</Typography>
+                              </Grid>
+                              <Grid item xs={6}>
+                                <Typography variant="body2" color="text.secondary">Phone</Typography>
+                                <Typography variant="body1">{profileData.phone || 'Not set'}</Typography>
+                              </Grid>
+                            </Grid>
+                          </Grid>
+                        </Grid>
+
+                        {/* Contact Information */}
+                        <Typography variant="h6" gutterBottom color="primary" sx={{ mt: 3 }}>
+                          Contact Information
+                        </Typography>
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} md={6}>
+                            <TextField
+                              label="Phone Number"
+                              value={profileData.phone}
+                              onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
+                              fullWidth variant="outlined" size="small"
+                            />
+                          </Grid>
+                          <Grid item xs={12} md={6}>
+                            <TextField
+                              label="Address"
+                              value={profileData.address}
+                              onChange={(e) => setProfileData(prev => ({ ...prev, address: e.target.value }))}
+                              fullWidth variant="outlined" size="small"
+                            />
+                          </Grid>
+                        </Grid>
+
+                        <Typography variant="subtitle1" sx={{ mt: 3, mb: 2, fontWeight: 500 }}>
+                          Emergency Contact
+                        </Typography>
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} md={4}>
+                            <TextField
+                              label="Contact Name"
+                              value={profileData.emergencyContact?.name || ''}
+                              onChange={(e) => setProfileData(prev => ({ ...prev, emergencyContact: { ...prev.emergencyContact, name: e.target.value } }))}
+                              fullWidth variant="outlined" size="small"
+                            />
+                          </Grid>
+                          <Grid item xs={12} md={4}>
+                            <TextField
+                              label="Relationship"
+                              value={profileData.emergencyContact?.relationship || ''}
+                              onChange={(e) => setProfileData(prev => ({ ...prev, emergencyContact: { ...prev.emergencyContact, relationship: e.target.value } }))}
+                              fullWidth variant="outlined" size="small"
+                            />
+                          </Grid>
+                          <Grid item xs={12} md={4}>
+                            <TextField
+                              label="Contact Phone"
+                              value={profileData.emergencyContact?.phone || ''}
+                              onChange={(e) => setProfileData(prev => ({ ...prev, emergencyContact: { ...prev.emergencyContact, phone: e.target.value } }))}
+                              fullWidth variant="outlined" size="small"
+                            />
+                          </Grid>
+                        </Grid>
+                        <Button variant="contained" color="primary" onClick={handleUpdateContact} disabled={profileLoading} sx={{ mt: 2 }}>
+                          {profileLoading ? 'Saving...' : 'Save Contact Information'}
+                        </Button>
+
+                        {/* Latest Diagnosis */}
+                        <Typography variant="h6" gutterBottom color="primary" sx={{ mt: 4 }}>
+                          Latest Diagnosis
+                        </Typography>
+                        {latestPrescription ? (
+                          <Box sx={{ bgcolor: 'grey.50', p: 2, borderRadius: 1 }}>
+                            <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                              {latestPrescription.diagnosis || 'No diagnosis recorded'}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                              Prescribed by: Dr. {latestPrescription.doctorName || 'Unknown'} | 
+                              Date: {new Date(latestPrescription.createdAt).toLocaleDateString()}
+                            </Typography>
+                            {latestPrescription.medications && latestPrescription.medications.length > 0 && (
+                              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                Medications: {latestPrescription.medications.map(m => m.name).join(', ')}
+                              </Typography>
+                            )}
+                          </Box>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">No prescriptions found</Typography>
+                        )}
+                      </>
+                    )}
+
+                    {/* ALLERGIES Tab */}
+                    {profileTab === 1 && (
+                      <>
+                        {/* Environmental Allergies */}
+                        <Box sx={{ mb: 4 }}>
+                          <Typography variant="h6" gutterBottom>Environmental</Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            Patient has any Environmental based allergy?
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                            {profileData.allergies?.environmental?.length > 0 ? (
+                              profileData.allergies.environmental.map((allergy) => (
+                                <Chip key={allergy} label={allergy} color="warning" variant="outlined"
+                                  onDelete={() => handleRemoveAllergy('environmental', allergy)} deleteIcon={<CancelIcon />} />
+                              ))
+                            ) : (
+                              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>No environmental allergies</Typography>
+                            )}
+                          </Box>
+                          <Button variant="text" color="primary" onClick={() => { setAllergyCategory('environmental'); }}
+                            sx={{ textTransform: 'none' }}>
+                            + Add an Allergen
                           </Button>
+                          {allergyCategory === 'environmental' && (
+                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mt: 1 }}>
+                              <TextField label="Add Environmental Allergy" value={newAllergy} onChange={(e) => setNewAllergy(e.target.value)}
+                                size="small" sx={{ flexGrow: 1, maxWidth: 300 }} onKeyPress={(e) => e.key === 'Enter' && handleAddAllergy('environmental')} />
+                              <Button variant="contained" color="warning" onClick={() => handleAddAllergy('environmental')}
+                                disabled={profileLoading || !newAllergy.trim()} size="small">Add</Button>
+                            </Box>
+                          )}
                         </Box>
-                      )}
-                    </Grid>
-                    <Grid item xs={12} md={8}>
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="h4" sx={{ fontWeight: 500 }}>
-                          {profileData.firstName} {profileData.lastName}
-                        </Typography>
-                        <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>
-                          {profileData.email}
-                        </Typography>
-                        <Chip 
-                          label={user?.role === 'doctor' ? 'Doctor' : 'Patient'} 
-                          size="small" 
-                          color="primary" 
-                          sx={{ mt: 1 }}
-                        />
-                      </Box>
-                      <Grid container spacing={2} sx={{ mt: 1 }}>
-                        <Grid item xs={6}>
-                          <Typography variant="body2" color="text.secondary">Date of Birth</Typography>
-                          <Typography variant="body1">{profileData.dateOfBirth || 'Not set'}</Typography>
-                        </Grid>
-                        <Grid item xs={6}>
-                          <Typography variant="body2" color="text.secondary">Gender</Typography>
-                          <Typography variant="body1" sx={{ textTransform: 'capitalize' }}>{profileData.gender || 'Not set'}</Typography>
-                        </Grid>
-                        <Grid item xs={6}>
-                          <Typography variant="body2" color="text.secondary">Blood Type</Typography>
-                          <Typography variant="body1">{profileData.bloodType || 'Not set'}</Typography>
-                        </Grid>
-                        <Grid item xs={6}>
-                          <Typography variant="body2" color="text.secondary">Phone</Typography>
-                          <Typography variant="body1">{profileData.phone || 'Not set'}</Typography>
-                        </Grid>
-                      </Grid>
-                    </Grid>
-                  </Grid>
-                </Paper>
 
-                {/* Latest Diagnosis */}
-                <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-                  <Typography variant="h6" gutterBottom color="primary">
-                    Latest Diagnosis
-                  </Typography>
-                  {latestPrescription ? (
-                    <Box sx={{ bgcolor: 'grey.50', p: 2, borderRadius: 1 }}>
-                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                        {latestPrescription.diagnosis || 'No diagnosis recorded'}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                        Prescribed by: Dr. {latestPrescription.doctorName || 'Unknown'} | 
-                        Date: {new Date(latestPrescription.createdAt).toLocaleDateString()}
-                      </Typography>
-                      {latestPrescription.medications && latestPrescription.medications.length > 0 && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                          Medications: {latestPrescription.medications.map(m => m.name).join(', ')}
-                        </Typography>
-                      )}
-                    </Box>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      No prescriptions found
-                    </Typography>
-                  )}
-                </Paper>
+                        {/* Food Allergies */}
+                        <Box sx={{ mb: 4, pt: 2, borderTop: 1, borderColor: 'divider' }}>
+                          <Typography variant="h6" gutterBottom>Food</Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            Patient has any Food based allergy?
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                            {profileData.allergies?.food?.length > 0 ? (
+                              profileData.allergies.food.map((allergy) => (
+                                <Chip key={allergy} label={allergy} color="success" variant="outlined"
+                                  onDelete={() => handleRemoveAllergy('food', allergy)} deleteIcon={<CancelIcon />} />
+                              ))
+                            ) : (
+                              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>No food allergies</Typography>
+                            )}
+                          </Box>
+                          <Button variant="text" color="primary" onClick={() => { setAllergyCategory('food'); }}
+                            sx={{ textTransform: 'none' }}>
+                            + Add an Allergen
+                          </Button>
+                          {allergyCategory === 'food' && (
+                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mt: 1 }}>
+                              <TextField label="Add Food Allergy" value={newAllergy} onChange={(e) => setNewAllergy(e.target.value)}
+                                size="small" sx={{ flexGrow: 1, maxWidth: 300 }} onKeyPress={(e) => e.key === 'Enter' && handleAddAllergy('food')} />
+                              <Button variant="contained" color="success" onClick={() => handleAddAllergy('food')}
+                                disabled={profileLoading || !newAllergy.trim()} size="small">Add</Button>
+                            </Box>
+                          )}
+                        </Box>
 
-                {/* Allergies Section */}
-                <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-                  <Typography variant="h6" gutterBottom color="primary">
-                    Allergies
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                    {profileData.allergies && profileData.allergies.length > 0 ? (
-                      profileData.allergies.map((allergy) => (
-                        <Chip
-                          key={allergy}
-                          label={allergy}
-                          color="error"
-                          variant="outlined"
-                          onDelete={() => handleRemoveAllergy(allergy)}
-                          deleteIcon={<CancelIcon />}
-                        />
-                      ))
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">
-                        No allergies recorded
-                      </Typography>
+                        {/* Drug Allergies */}
+                        <Box sx={{ mb: 4, pt: 2, borderTop: 1, borderColor: 'divider' }}>
+                          <Typography variant="h6" gutterBottom>Drugs</Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            Patient has any Drugs based allergy?
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                            {profileData.allergies?.drugs?.length > 0 ? (
+                              profileData.allergies.drugs.map((allergy) => (
+                                <Chip key={allergy} label={allergy} color="error" variant="outlined"
+                                  onDelete={() => handleRemoveAllergy('drugs', allergy)} deleteIcon={<CancelIcon />} />
+                              ))
+                            ) : (
+                              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>No drug allergies</Typography>
+                            )}
+                          </Box>
+                          <Button variant="text" color="primary" onClick={() => { setAllergyCategory('drugs'); }}
+                            sx={{ textTransform: 'none' }}>
+                            + Add an Allergen
+                          </Button>
+                          {allergyCategory === 'drugs' && (
+                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mt: 1 }}>
+                              <TextField label="Add Drug Allergy" value={newAllergy} onChange={(e) => setNewAllergy(e.target.value)}
+                                size="small" sx={{ flexGrow: 1, maxWidth: 300 }} onKeyPress={(e) => e.key === 'Enter' && handleAddAllergy('drugs')} />
+                              <Button variant="contained" color="error" onClick={() => handleAddAllergy('drugs')}
+                                disabled={profileLoading || !newAllergy.trim()} size="small">Add</Button>
+                            </Box>
+                          )}
+                        </Box>
+
+                        {/* Other Allergies */}
+                        <Box sx={{ pt: 2, borderTop: 1, borderColor: 'divider' }}>
+                          <Typography variant="h6" gutterBottom>Other</Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            Patient has any Other based allergy?
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                            {profileData.allergies?.other?.length > 0 ? (
+                              profileData.allergies.other.map((allergy) => (
+                                <Chip key={allergy} label={allergy} color="info" variant="outlined"
+                                  onDelete={() => handleRemoveAllergy('other', allergy)} deleteIcon={<CancelIcon />} />
+                              ))
+                            ) : (
+                              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>No other allergies</Typography>
+                            )}
+                          </Box>
+                          <Button variant="text" color="primary" onClick={() => { setAllergyCategory('other'); }}
+                            sx={{ textTransform: 'none' }}>
+                            + Add an Allergen
+                          </Button>
+                          {allergyCategory === 'other' && (
+                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mt: 1 }}>
+                              <TextField label="Add Other Allergy" value={newAllergy} onChange={(e) => setNewAllergy(e.target.value)}
+                                size="small" sx={{ flexGrow: 1, maxWidth: 300 }} onKeyPress={(e) => e.key === 'Enter' && handleAddAllergy('other')} />
+                              <Button variant="contained" color="info" onClick={() => handleAddAllergy('other')}
+                                disabled={profileLoading || !newAllergy.trim()} size="small">Add</Button>
+                            </Box>
+                          )}
+                        </Box>
+                      </>
+                    )}
+
+                    {/* HISTORY Tab */}
+                    {profileTab === 2 && (
+                      <>
+                        <Typography variant="h6" gutterBottom>Disease History</Typography>
+                        {profileData.diseaseHistory?.length > 0 ? (
+                          <Box sx={{ mb: 3 }}>
+                            {profileData.diseaseHistory.map((history) => (
+                              <Paper key={history.id} variant="outlined" sx={{ p: 2, mb: 2 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                  <Box>
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>{history.disease}</Typography>
+                                    {history.diagnosedDate && (
+                                      <Typography variant="body2" color="text.secondary">
+                                        Diagnosed: {new Date(history.diagnosedDate).toLocaleDateString()}
+                                      </Typography>
+                                    )}
+                                    {history.notes && (
+                                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                        Notes: {history.notes}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                  <IconButton size="small" color="error" onClick={() => handleRemoveDiseaseHistory(history.id)}>
+                                    <DeleteIcon />
+                                  </IconButton>
+                                </Box>
+                              </Paper>
+                            ))}
+                          </Box>
+                        ) : (
+                          <Box sx={{ textAlign: 'center', py: 4 }}>
+                            <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+                              You have not added any patient's disease history
+                            </Typography>
+                          </Box>
+                        )}
+                        
+                        {/* Add Disease History Form */}
+                        <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
+                          <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 500 }}>Add Disease History</Typography>
+                          <Grid container spacing={2}>
+                            <Grid item xs={12} md={4}>
+                              <TextField
+                                label="Disease/Condition"
+                                value={newDiseaseHistory.disease}
+                                onChange={(e) => setNewDiseaseHistory(prev => ({ ...prev, disease: e.target.value }))}
+                                fullWidth size="small"
+                              />
+                            </Grid>
+                            <Grid item xs={12} md={4}>
+                              <TextField
+                                label="Diagnosed Date"
+                                type="date"
+                                value={newDiseaseHistory.diagnosedDate}
+                                onChange={(e) => setNewDiseaseHistory(prev => ({ ...prev, diagnosedDate: e.target.value }))}
+                                fullWidth size="small"
+                                InputLabelProps={{ shrink: true }}
+                              />
+                            </Grid>
+                            <Grid item xs={12} md={4}>
+                              <TextField
+                                label="Notes"
+                                value={newDiseaseHistory.notes}
+                                onChange={(e) => setNewDiseaseHistory(prev => ({ ...prev, notes: e.target.value }))}
+                                fullWidth size="small"
+                              />
+                            </Grid>
+                          </Grid>
+                          <Button
+                            variant="outlined"
+                            color="primary"
+                            onClick={handleAddDiseaseHistory}
+                            disabled={profileLoading || !newDiseaseHistory.disease.trim()}
+                            sx={{ mt: 2 }}
+                          >
+                            ADD DISEASE HISTORY
+                          </Button>
+                        </Paper>
+                      </>
+                    )}
+
+                    {/* HABITS Tab */}
+                    {profileTab === 3 && (
+                      <>
+                        <Typography variant="h6" gutterBottom>Lifestyle & Habits</Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                          Track your lifestyle habits for better health management
+                        </Typography>
+                        
+                        <Grid container spacing={3}>
+                          <Grid item xs={12} md={6}>
+                            <TextField
+                              label="Smoking"
+                              select
+                              value={profileData.habits?.smoking || ''}
+                              onChange={(e) => setProfileData(prev => ({ ...prev, habits: { ...prev.habits, smoking: e.target.value } }))}
+                              fullWidth
+                              SelectProps={{ native: true }}
+                            >
+                              <option value="">Select...</option>
+                              <option value="never">Never</option>
+                              <option value="former">Former smoker</option>
+                              <option value="occasional">Occasional</option>
+                              <option value="regular">Regular</option>
+                            </TextField>
+                          </Grid>
+                          <Grid item xs={12} md={6}>
+                            <TextField
+                              label="Alcohol"
+                              select
+                              value={profileData.habits?.alcohol || ''}
+                              onChange={(e) => setProfileData(prev => ({ ...prev, habits: { ...prev.habits, alcohol: e.target.value } }))}
+                              fullWidth
+                              SelectProps={{ native: true }}
+                            >
+                              <option value="">Select...</option>
+                              <option value="never">Never</option>
+                              <option value="occasional">Occasional</option>
+                              <option value="moderate">Moderate</option>
+                              <option value="regular">Regular</option>
+                            </TextField>
+                          </Grid>
+                          <Grid item xs={12} md={6}>
+                            <TextField
+                              label="Exercise"
+                              select
+                              value={profileData.habits?.exercise || ''}
+                              onChange={(e) => setProfileData(prev => ({ ...prev, habits: { ...prev.habits, exercise: e.target.value } }))}
+                              fullWidth
+                              SelectProps={{ native: true }}
+                            >
+                              <option value="">Select...</option>
+                              <option value="none">None</option>
+                              <option value="light">Light (1-2 times/week)</option>
+                              <option value="moderate">Moderate (3-4 times/week)</option>
+                              <option value="active">Active (5+ times/week)</option>
+                            </TextField>
+                          </Grid>
+                          <Grid item xs={12} md={6}>
+                            <TextField
+                              label="Diet"
+                              select
+                              value={profileData.habits?.diet || ''}
+                              onChange={(e) => setProfileData(prev => ({ ...prev, habits: { ...prev.habits, diet: e.target.value } }))}
+                              fullWidth
+                              SelectProps={{ native: true }}
+                            >
+                              <option value="">Select...</option>
+                              <option value="balanced">Balanced</option>
+                              <option value="vegetarian">Vegetarian</option>
+                              <option value="vegan">Vegan</option>
+                              <option value="keto">Keto</option>
+                              <option value="other">Other</option>
+                            </TextField>
+                          </Grid>
+                          <Grid item xs={12} md={6}>
+                            <TextField
+                              label="Sleep (hours/night)"
+                              select
+                              value={profileData.habits?.sleep || ''}
+                              onChange={(e) => setProfileData(prev => ({ ...prev, habits: { ...prev.habits, sleep: e.target.value } }))}
+                              fullWidth
+                              SelectProps={{ native: true }}
+                            >
+                              <option value="">Select...</option>
+                              <option value="less5">Less than 5 hours</option>
+                              <option value="5-6">5-6 hours</option>
+                              <option value="7-8">7-8 hours</option>
+                              <option value="more8">More than 8 hours</option>
+                            </TextField>
+                          </Grid>
+                          <Grid item xs={12} md={6}>
+                            <TextField
+                              label="Other Notes"
+                              value={profileData.habits?.other || ''}
+                              onChange={(e) => setProfileData(prev => ({ ...prev, habits: { ...prev.habits, other: e.target.value } }))}
+                              fullWidth
+                              multiline
+                              rows={1}
+                            />
+                          </Grid>
+                        </Grid>
+                        
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          onClick={handleUpdateHabits}
+                          disabled={profileLoading}
+                          sx={{ mt: 3 }}
+                        >
+                          {profileLoading ? 'Saving...' : 'Save Habits'}
+                        </Button>
+                      </>
                     )}
                   </Box>
-                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                    <TextField
-                      label="Add New Allergy"
-                      value={newAllergy}
-                      onChange={(e) => setNewAllergy(e.target.value)}
-                      size="small"
-                      sx={{ flexGrow: 1, maxWidth: 300 }}
-                      onKeyPress={(e) => e.key === 'Enter' && handleAddAllergy()}
-                    />
-                    <Button
-                      variant="contained"
-                      color="error"
-                      onClick={handleAddAllergy}
-                      disabled={profileLoading || !newAllergy.trim()}
-                      size="small"
-                    >
-                      Add Allergy
-                    </Button>
-                  </Box>
-                </Paper>
-
-                {/* Contact Information */}
-                <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-                  <Typography variant="h6" gutterBottom color="primary">
-                    Contact Information
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        label="Phone Number"
-                        value={profileData.phone}
-                        onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
-                        fullWidth
-                        variant="outlined"
-                        size="small"
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        label="Address"
-                        value={profileData.address}
-                        onChange={(e) => setProfileData(prev => ({ ...prev, address: e.target.value }))}
-                        fullWidth
-                        variant="outlined"
-                        size="small"
-                      />
-                    </Grid>
-                  </Grid>
-
-                  <Typography variant="subtitle1" sx={{ mt: 3, mb: 2, fontWeight: 500 }}>
-                    Emergency Contact
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        label="Contact Name"
-                        value={profileData.emergencyContact?.name || ''}
-                        onChange={(e) => setProfileData(prev => ({ 
-                          ...prev, 
-                          emergencyContact: { ...prev.emergencyContact, name: e.target.value }
-                        }))}
-                        fullWidth
-                        variant="outlined"
-                        size="small"
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        label="Relationship"
-                        value={profileData.emergencyContact?.relationship || ''}
-                        onChange={(e) => setProfileData(prev => ({ 
-                          ...prev, 
-                          emergencyContact: { ...prev.emergencyContact, relationship: e.target.value }
-                        }))}
-                        fullWidth
-                        variant="outlined"
-                        size="small"
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        label="Contact Phone"
-                        value={profileData.emergencyContact?.phone || ''}
-                        onChange={(e) => setProfileData(prev => ({ 
-                          ...prev, 
-                          emergencyContact: { ...prev.emergencyContact, phone: e.target.value }
-                        }))}
-                        fullWidth
-                        variant="outlined"
-                        size="small"
-                      />
-                    </Grid>
-                  </Grid>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleUpdateContact}
-                    disabled={profileLoading}
-                    sx={{ mt: 2 }}
-                  >
-                    {profileLoading ? 'Saving...' : 'Save Contact Information'}
-                  </Button>
                 </Paper>
 
                 {/* Snackbar for profile notifications */}
