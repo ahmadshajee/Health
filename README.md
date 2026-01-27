@@ -1,4 +1,4 @@
-# Healthcare Management System
+# Medizo
 
 A comprehensive healthcare management system built with React.js and Node.js, featuring prescription management, patient records, and medical history tracking.
 
