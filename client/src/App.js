@@ -1586,23 +1586,25 @@ const AppContent = () => {
                     bgcolor: 'grey.50',
                     flex: 1
                   }}>
-                    <Typography variant="h6" color="primary" align="center" sx={{ mb: 3 }}>
+                    <Typography variant="h5" color="primary" align="center" sx={{ mb: 2 }}>
                       Show this QR code to your doctor for easy scanning
                     </Typography>
                     <Box 
                       component="img"
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(user?.id || user?._id || '')}`}
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(user?.id || user?._id || '')}`}
                       alt="Patient QR Code"
                       sx={{ 
-                        width: { xs: '280px', sm: '350px', md: '400px' }, 
-                        height: { xs: '280px', sm: '350px', md: '400px' }, 
-                        border: '4px solid', 
+                        width: { xs: '85vw', sm: '70vw', md: '50vw' }, 
+                        height: { xs: '85vw', sm: '70vw', md: '50vw' }, 
+                        maxWidth: '600px',
+                        maxHeight: '600px',
+                        border: '6px solid', 
                         borderColor: 'primary.main',
                         borderRadius: 3,
                         bgcolor: 'white',
                         p: 2,
-                        mb: 3,
-                        boxShadow: 4
+                        mb: 2,
+                        boxShadow: 6
                       }}
                     />
                     <Paper elevation={2} sx={{ p: 2, bgcolor: 'white', maxWidth: '100%' }}>
