@@ -1,21 +1,102 @@
 import axios from 'axios';
 
-// Use Render backend in production, localhost in development
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://health-8zum.onrender.com/api'
-  : 'http://localhost:5000/api';
+// Server URLs - Primary (IIS) and Backup (Render)
+const PRIMARY_SERVER = 'http://122.166.193.245:5000/api';  // Your IIS Server
+const BACKUP_SERVER = 'https://health-8zum.onrender.com/api';  // Render Backup
+const LOCAL_SERVER = 'http://localhost:5000/api';  // Local development
 
-// Create axios instance
+// Cache for active server URL
+let activeServerUrl = null;
+let serverCheckInProgress = false;
+let lastServerCheck = 0;
+const SERVER_CHECK_INTERVAL = 60000; // Re-check server every 60 seconds
+
+// Function to check if a server is available
+const checkServerHealth = async (serverUrl) => {
+  try {
+    const healthUrl = serverUrl.replace('/api', '/health');
+    const response = await axios.get(healthUrl, { timeout: 5000 });
+    return response.status === 200;
+  } catch (error) {
+    console.log(`Server ${serverUrl} is not available:`, error.message);
+    return false;
+  }
+};
+
+// Function to determine the best available server
+const getActiveServer = async () => {
+  const now = Date.now();
+  
+  // Return cached server if recently checked
+  if (activeServerUrl && (now - lastServerCheck) < SERVER_CHECK_INTERVAL) {
+    return activeServerUrl;
+  }
+  
+  // Prevent multiple simultaneous checks
+  if (serverCheckInProgress) {
+    // Wait for the check to complete
+    while (serverCheckInProgress) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    return activeServerUrl;
+  }
+  
+  serverCheckInProgress = true;
+  
+  try {
+    // In development, use localhost
+    if (process.env.NODE_ENV !== 'production') {
+      activeServerUrl = LOCAL_SERVER;
+      lastServerCheck = now;
+      console.log('Development mode: Using local server');
+      return activeServerUrl;
+    }
+    
+    // In production, try primary (IIS) server first
+    console.log('Checking primary server (IIS)...');
+    if (await checkServerHealth(PRIMARY_SERVER)) {
+      activeServerUrl = PRIMARY_SERVER;
+      lastServerCheck = now;
+      console.log('✅ Using PRIMARY server (IIS):', PRIMARY_SERVER);
+      return activeServerUrl;
+    }
+    
+    // Fallback to backup (Render) server
+    console.log('Primary server unavailable, checking backup server (Render)...');
+    if (await checkServerHealth(BACKUP_SERVER)) {
+      activeServerUrl = BACKUP_SERVER;
+      lastServerCheck = now;
+      console.log('⚠️ Using BACKUP server (Render):', BACKUP_SERVER);
+      return activeServerUrl;
+    }
+    
+    // If both fail, default to backup (Render might be cold starting)
+    console.log('Both servers unreachable, defaulting to backup server');
+    activeServerUrl = BACKUP_SERVER;
+    lastServerCheck = now;
+    return activeServerUrl;
+  } finally {
+    serverCheckInProgress = false;
+  }
+};
+
+// Initialize server check on load
+getActiveServer();
+
+// Create axios instance with dynamic baseURL
 const api = axios.create({
-  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Add request interceptor to include auth token
+// Add request interceptor to set baseURL dynamically and include auth token
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
+    // Set the active server URL
+    const serverUrl = await getActiveServer();
+    config.baseURL = serverUrl;
+    
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -27,10 +108,27 @@ api.interceptors.request.use(
   }
 );
 
-// Add response interceptor to handle errors
+// Add response interceptor to handle errors and failover
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // If request failed due to network error and we haven't retried yet
+    if (!error.response && !originalRequest._retry && process.env.NODE_ENV === 'production') {
+      originalRequest._retry = true;
+      
+      // Force server recheck
+      activeServerUrl = null;
+      lastServerCheck = 0;
+      
+      console.log('Request failed, attempting failover...');
+      const newServerUrl = await getActiveServer();
+      originalRequest.baseURL = newServerUrl;
+      
+      return api(originalRequest);
+    }
+    
     if (error.response?.status === 401) {
       // Token expired or invalid
       localStorage.removeItem('token');
@@ -40,6 +138,14 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Export function to get current server status
+export const getServerStatus = () => ({
+  activeServer: activeServerUrl,
+  isPrimary: activeServerUrl === PRIMARY_SERVER,
+  isBackup: activeServerUrl === BACKUP_SERVER,
+  lastCheck: new Date(lastServerCheck).toISOString()
+});
 
 // Auth API
 export const authAPI = {
