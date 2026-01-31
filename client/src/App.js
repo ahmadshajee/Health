@@ -681,7 +681,18 @@ const AppContent = () => {
       <AppBar position="static">
         <Toolbar sx={{ justifyContent: 'space-between' }}>
           {/* Left side - Logo and Title */}
-          <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+          <Box 
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              minWidth: 0,
+              cursor: 'pointer',
+              '&:hover': {
+                opacity: 0.85
+              }
+            }}
+            onClick={() => setActiveContent('dashboard')}
+          >
             <img 
               src="/LOGO.png" 
               alt="Medizo Logo" 
@@ -764,7 +775,18 @@ const AppContent = () => {
           '& .MuiDrawer-paper': { width: 250 }
         }}
       >
-        <Box sx={{ p: 2, bgcolor: '#134F4D', color: 'white' }}>
+        <Box 
+          sx={{ 
+            p: 2, 
+            bgcolor: '#134F4D', 
+            color: 'white',
+            cursor: 'pointer',
+            '&:hover': {
+              bgcolor: '#0f3d3b'
+            }
+          }}
+          onClick={() => { setActiveContent('dashboard'); handleDrawerToggle(); }}
+        >
           <Typography variant="h6">Medizo</Typography>
           <Typography variant="body2" sx={{ opacity: 0.7 }}>Health on your fingertips</Typography>
         </Box>
