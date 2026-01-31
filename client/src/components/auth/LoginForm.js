@@ -12,7 +12,7 @@ import { PersonOutline, LockOutlined } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import GoogleLoginButton from './GoogleLoginButton';
 
-const LoginForm = ({ onSwitchToRegister, onClose }) => {
+const LoginForm = ({ onSwitchToRegister, onClose, defaultRole = 'patient' }) => {
   const { login, loading, error, clearError } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
@@ -98,7 +98,7 @@ const LoginForm = ({ onSwitchToRegister, onClose }) => {
         </Button>
 
         {/* Google Login Button */}
-        <GoogleLoginButton onClose={onClose} showRoleSelection={true} />
+        <GoogleLoginButton onClose={onClose} showRoleSelection={true} defaultRole={defaultRole} />
         
         <Grid container justifyContent="flex-end">
           <Grid item>

@@ -128,6 +128,7 @@ const AppContent = () => {
   const { isAuthenticated, user, logout, loading } = useAuth();
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [authTabValue, setAuthTabValue] = useState(0);
+  const [defaultRole, setDefaultRole] = useState('patient');
   const [activeContent, setActiveContent] = useState('dashboard');
   
   // Mobile responsive state
@@ -562,8 +563,9 @@ const AppContent = () => {
     }
   };
 
-  const handleOpenAuthDialog = (tabValue = 0) => {
+  const handleOpenAuthDialog = (tabValue = 0, role = 'patient') => {
     setAuthTabValue(tabValue);
+    setDefaultRole(role);
     setAuthDialogOpen(true);
   };
 
@@ -817,6 +819,7 @@ const AppContent = () => {
               <LoginForm 
                 onSwitchToRegister={() => setAuthTabValue(1)} 
                 onClose={handleCloseAuthDialog}
+                defaultRole={defaultRole}
               />
             ) : (
               <RegisterForm onClose={handleCloseAuthDialog} />
@@ -852,7 +855,7 @@ const AppContent = () => {
                     variant="contained" 
                     size="large" 
                     color="primary"
-                    onClick={() => handleOpenAuthDialog(0)}
+                    onClick={() => handleOpenAuthDialog(0, 'doctor')}
                     startIcon={<PersonIcon />}
                   >
                     Login as Doctor
@@ -871,7 +874,7 @@ const AppContent = () => {
                     variant="contained" 
                     size="large" 
                     color="secondary"
-                    onClick={() => handleOpenAuthDialog(0)}
+                    onClick={() => handleOpenAuthDialog(0, 'patient')}
                     startIcon={<PersonIcon />}
                   >
                     Login as Patient

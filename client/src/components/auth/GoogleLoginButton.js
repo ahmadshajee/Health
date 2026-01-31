@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import {
   Box,
@@ -18,11 +18,16 @@ import { useAuth } from '../../contexts/AuthContext';
  * Google Login Button Component
  * Provides Google OAuth sign-in functionality with role selection for new users
  */
-const GoogleLoginButton = ({ onSuccess, onClose, showRoleSelection = true }) => {
+const GoogleLoginButton = ({ onSuccess, onClose, showRoleSelection = true, defaultRole = 'patient' }) => {
   const { googleLogin, loading } = useAuth();
-  const [selectedRole, setSelectedRole] = useState('patient');
+  const [selectedRole, setSelectedRole] = useState(defaultRole);
   const [error, setError] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Update selectedRole when defaultRole prop changes
+  useEffect(() => {
+    setSelectedRole(defaultRole);
+  }, [defaultRole]);
 
   const handleGoogleSuccess = async (credentialResponse) => {
     setError(null);
