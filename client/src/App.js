@@ -1014,6 +1014,155 @@ const AppContent = () => {
                   }
                   return (
                   <>
+                    {/* Today's Follow-up Appointments Section */}
+                    {(() => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      
+                      const todayAppointments = prescriptions.filter(p => {
+                        if (!p.followUpDate) return false;
+                        const followUp = new Date(p.followUpDate);
+                        followUp.setHours(0, 0, 0, 0);
+                        return followUp.getTime() === today.getTime();
+                      });
+                      
+                      const upcomingAppointments = prescriptions.filter(p => {
+                        if (!p.followUpDate) return false;
+                        const followUp = new Date(p.followUpDate);
+                        followUp.setHours(0, 0, 0, 0);
+                        const diffDays = Math.ceil((followUp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                        return diffDays > 0 && diffDays <= 7;
+                      });
+
+                      return (
+                        <>
+                          {/* Today's Appointments */}
+                          {todayAppointments.length > 0 && (
+                            <Paper 
+                              elevation={3} 
+                              sx={{ 
+                                p: 2, 
+                                mb: 3, 
+                                background: 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)',
+                                border: '2px solid #ff9800'
+                              }}
+                            >
+                              <Typography variant="h6" sx={{ mb: 2, color: 'warning.dark', display: 'flex', alignItems: 'center' }}>
+                                <Box component="span" sx={{ mr: 1, fontSize: '1.5rem' }}>📅</Box>
+                                Today's Follow-up Appointments ({todayAppointments.length})
+                              </Typography>
+                              <TableContainer component={Paper} variant="outlined">
+                                <Table size="small">
+                                  <TableHead>
+                                    <TableRow sx={{ bgcolor: 'warning.light' }}>
+                                      <TableCell><strong>Patient</strong></TableCell>
+                                      <TableCell><strong>Diagnosis</strong></TableCell>
+                                      <TableCell><strong>Original Date</strong></TableCell>
+                                      <TableCell><strong>Follow-up</strong></TableCell>
+                                      <TableCell align="center"><strong>Actions</strong></TableCell>
+                                    </TableRow>
+                                  </TableHead>
+                                  <TableBody>
+                                    {todayAppointments.map((prescription) => (
+                                      <TableRow key={prescription.id} hover sx={{ bgcolor: 'rgba(255, 152, 0, 0.1)' }}>
+                                        <TableCell>
+                                          <Box display="flex" alignItems="center">
+                                            <PersonIcon fontSize="small" sx={{ mr: 1, color: 'warning.main' }} />
+                                            <strong>{prescription.patientName || prescription.patientEmail}</strong>
+                                          </Box>
+                                        </TableCell>
+                                        <TableCell>{prescription.diagnosis}</TableCell>
+                                        <TableCell>{new Date(prescription.createdAt).toLocaleDateString()}</TableCell>
+                                        <TableCell>
+                                          <Chip label="TODAY" color="warning" size="small" sx={{ fontWeight: 'bold' }} />
+                                        </TableCell>
+                                        <TableCell align="center">
+                                          <Button
+                                            size="small"
+                                            variant="contained"
+                                            color="warning"
+                                            startIcon={<VisibilityIcon />}
+                                            onClick={() => handleViewPrescription(prescription)}
+                                          >
+                                            View
+                                          </Button>
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </TableContainer>
+                            </Paper>
+                          )}
+
+                          {/* Upcoming Appointments (Next 7 Days) */}
+                          {upcomingAppointments.length > 0 && (
+                            <Paper 
+                              elevation={2} 
+                              sx={{ 
+                                p: 2, 
+                                mb: 3, 
+                                background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
+                                border: '1px solid #2196f3'
+                              }}
+                            >
+                              <Typography variant="h6" sx={{ mb: 2, color: 'info.dark', display: 'flex', alignItems: 'center' }}>
+                                <Box component="span" sx={{ mr: 1, fontSize: '1.5rem' }}>🔔</Box>
+                                Upcoming Appointments - Next 7 Days ({upcomingAppointments.length})
+                              </Typography>
+                              <TableContainer component={Paper} variant="outlined">
+                                <Table size="small">
+                                  <TableHead>
+                                    <TableRow sx={{ bgcolor: 'info.light' }}>
+                                      <TableCell><strong>Patient</strong></TableCell>
+                                      <TableCell><strong>Diagnosis</strong></TableCell>
+                                      <TableCell><strong>Follow-up Date</strong></TableCell>
+                                      <TableCell><strong>Days Until</strong></TableCell>
+                                    </TableRow>
+                                  </TableHead>
+                                  <TableBody>
+                                    {upcomingAppointments
+                                      .sort((a, b) => new Date(a.followUpDate).getTime() - new Date(b.followUpDate).getTime())
+                                      .map((prescription) => {
+                                        const followUp = new Date(prescription.followUpDate);
+                                        followUp.setHours(0, 0, 0, 0);
+                                        const daysUntil = Math.ceil((followUp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                                        return (
+                                          <TableRow key={prescription.id} hover>
+                                            <TableCell>
+                                              <Box display="flex" alignItems="center">
+                                                <PersonIcon fontSize="small" sx={{ mr: 1, color: 'info.main' }} />
+                                                {prescription.patientName || prescription.patientEmail}
+                                              </Box>
+                                            </TableCell>
+                                            <TableCell>{prescription.diagnosis}</TableCell>
+                                            <TableCell>
+                                              {new Date(prescription.followUpDate).toLocaleDateString('en-US', {
+                                                weekday: 'short',
+                                                month: 'short',
+                                                day: 'numeric'
+                                              })}
+                                            </TableCell>
+                                            <TableCell>
+                                              <Chip 
+                                                label={daysUntil === 1 ? 'Tomorrow' : `In ${daysUntil} days`} 
+                                                color="info" 
+                                                size="small" 
+                                                variant="outlined"
+                                              />
+                                            </TableCell>
+                                          </TableRow>
+                                        );
+                                      })}
+                                  </TableBody>
+                                </Table>
+                              </TableContainer>
+                            </Paper>
+                          )}
+                        </>
+                      );
+                    })()}
+
                     {/* Active Prescriptions Section */}
                     <Typography variant="h6" sx={{ mb: 2, color: 'success.main' }}>
                       <CheckCircleIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
