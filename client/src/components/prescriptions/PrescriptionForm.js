@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -22,18 +22,25 @@ import {
   Checkbox,
   FormControlLabel,
   FormGroup,
-  Tooltip
+  Tooltip,
+  Tabs,
+  Tab
 } from '@mui/material';
 import { 
   Add as AddIcon, 
   Delete as DeleteIcon,
   QrCode as QrCodeIcon,
   PersonAdd as PersonAddIcon,
+  PersonSearch as PersonSearchIcon,
+  CameraAlt as CameraAltIcon,
+  UploadFile as UploadFileIcon,
+  Stop as StopIcon,
   WbSunny as MorningIcon,
   LightMode as AfternoonIcon,
   WbTwilight as EveningIcon,
   NightsStay as NightIcon
 } from '@mui/icons-material';
+import { Html5Qrcode } from 'html5-qrcode';
 import { usersAPI, prescriptionsAPI } from '../../services/api';
 import axios from 'axios';
 
@@ -422,6 +429,18 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
   });
   const [newPatientError, setNewPatientError] = useState('');
   
+  // Add Existing Patient dialog state
+  const [addExistingPatientDialogOpen, setAddExistingPatientDialogOpen] = useState(false);
+  const [lookingUpPatient, setLookingUpPatient] = useState(false);
+  const [patientIdToLookup, setPatientIdToLookup] = useState('');
+  const [foundPatient, setFoundPatient] = useState(null);
+  const [lookupError, setLookupError] = useState('');
+  const [lookupTabValue, setLookupTabValue] = useState(0); // 0 = Manual, 1 = Camera, 2 = Upload
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+  const html5QrCodeRef = useRef(null);
+  const fileInputRef = useRef(null);
+  
   // Medication autocomplete state
   const [medicationSuggestions, setMedicationSuggestions] = useState({});
   const [loadingMedications, setLoadingMedications] = useState({});
@@ -442,29 +461,239 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
     fetchPatients();
   }, []);
 
+  // Cleanup camera on unmount
+  useEffect(() => {
+    return () => {
+      if (html5QrCodeRef.current) {
+        try {
+          const state = html5QrCodeRef.current.getState();
+          if (state === 2) { // SCANNING state
+            html5QrCodeRef.current.stop().then(() => {
+              html5QrCodeRef.current.clear();
+            }).catch(() => {});
+          } else {
+            html5QrCodeRef.current.clear();
+          }
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      }
+      // Clean up temp file reader div
+      const tempDiv = document.getElementById("qr-file-reader");
+      if (tempDiv && tempDiv.parentNode === document.body) {
+        document.body.removeChild(tempDiv);
+      }
+    };
+  }, []);
+
   const fetchPatients = async () => {
     try {
       setLoadingPatients(true);
       setError(''); // Clear any previous errors
-      console.log('Fetching patients...');
-      const response = await usersAPI.getPatients();
-      console.log('Patients response:', response);
+      console.log('Fetching my patients (security: only patients I have prescribed to)...');
+      const response = await usersAPI.getMyPatients();
+      console.log('My patients response:', response);
       console.log('Patients array:', response.patients);
       
       if (response.patients && response.patients.length > 0) {
         setPatientsList(response.patients);
         console.log('Successfully loaded', response.patients.length, 'patients');
       } else {
-        console.log('No patients found in response');
+        console.log('No patients found - this doctor has not prescribed to any patients yet');
         setPatientsList([]);
       }
     } catch (error) {
       console.error('Failed to fetch patients:', error);
       console.error('Error details:', error.response?.data || error.message);
-      setError(`Failed to load patients list: ${error.response?.data?.message || error.message}`);
+      // Don't show error for empty list - just show empty state
       setPatientsList([]);
     } finally {
       setLoadingPatients(false);
+    }
+  };
+
+  // Handle Add Existing Patient dialog
+  const handleOpenAddExistingPatientDialog = () => {
+    setAddExistingPatientDialogOpen(true);
+    setLookupError('');
+    setPatientIdToLookup('');
+    setFoundPatient(null);
+    setLookupTabValue(0);
+    setCameraError('');
+  };
+
+  const handleCloseAddExistingPatientDialog = async () => {
+    // Stop camera if running - must be awaited
+    await stopCameraAsync();
+    setAddExistingPatientDialogOpen(false);
+    setLookupError('');
+    setPatientIdToLookup('');
+    setFoundPatient(null);
+    setLookupTabValue(0);
+    setCameraError('');
+  };
+
+  // QR Code scanning functions
+  const startCamera = async () => {
+    setCameraError('');
+    
+    // Wait a bit for the DOM to be ready
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    const readerElement = document.getElementById("qr-reader");
+    if (!readerElement) {
+      setCameraError('Camera container not ready. Please try again.');
+      return;
+    }
+    
+    try {
+      // Clear any existing content
+      readerElement.innerHTML = '';
+      
+      const html5QrCode = new Html5Qrcode("qr-reader");
+      html5QrCodeRef.current = html5QrCode;
+      
+      await html5QrCode.start(
+        { facingMode: "environment" }, // Use back camera
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 }
+        },
+        (decodedText) => {
+          // QR code scanned successfully
+          console.log('QR Code scanned:', decodedText);
+          setPatientIdToLookup(decodedText);
+          // Stop camera first, then lookup
+          stopCameraAsync().then(() => {
+            handleLookupPatientById(decodedText);
+          });
+        },
+        (errorMessage) => {
+          // Scan error - ignore, just means no QR found yet
+        }
+      );
+      setIsCameraActive(true);
+    } catch (err) {
+      console.error('Camera error:', err);
+      setCameraError('Unable to access camera. Please check permissions or try uploading a QR image.');
+      setIsCameraActive(false);
+    }
+  };
+
+  const stopCameraAsync = async () => {
+    if (html5QrCodeRef.current) {
+      try {
+        const state = html5QrCodeRef.current.getState();
+        if (state === 2) { // SCANNING state
+          await html5QrCodeRef.current.stop();
+        }
+        html5QrCodeRef.current.clear();
+      } catch (err) {
+        console.error('Error stopping camera:', err);
+      } finally {
+        html5QrCodeRef.current = null;
+        setIsCameraActive(false);
+      }
+    }
+  };
+
+  const stopCamera = () => {
+    stopCameraAsync();
+  };
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setCameraError('');
+    setLookupError('');
+
+    try {
+      // Create a temporary div for file scanning
+      let tempDiv = document.getElementById("qr-file-reader");
+      if (!tempDiv) {
+        tempDiv = document.createElement('div');
+        tempDiv.id = 'qr-file-reader';
+        tempDiv.style.display = 'none';
+        document.body.appendChild(tempDiv);
+      }
+      
+      const html5QrCode = new Html5Qrcode("qr-file-reader");
+      const decodedText = await html5QrCode.scanFile(file, true);
+      console.log('QR Code from file:', decodedText);
+      setPatientIdToLookup(decodedText);
+      // Auto lookup the patient
+      handleLookupPatientById(decodedText);
+      
+      // Cleanup
+      html5QrCode.clear();
+    } catch (err) {
+      console.error('QR scan error:', err);
+      setLookupError('Could not read QR code from image. Please try another image or enter the ID manually.');
+    }
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleLookupPatientById = async (patientId) => {
+    if (!patientId || !patientId.trim()) {
+      setLookupError('Please enter a Patient ID');
+      return;
+    }
+
+    setLookingUpPatient(true);
+    setLookupError('');
+    setFoundPatient(null);
+
+    try {
+      const response = await usersAPI.lookupPatientById(patientId.trim());
+      console.log('Patient found:', response.patient);
+      setFoundPatient(response.patient);
+    } catch (error) {
+      console.error('Failed to lookup patient:', error);
+      setLookupError(error.message || 'Patient not found. Please check the Patient ID.');
+    } finally {
+      setLookingUpPatient(false);
+    }
+  };
+
+  const handleLookupPatient = async () => {
+    await handleLookupPatientById(patientIdToLookup);
+  };
+
+  const handleAddFoundPatient = async () => {
+    if (foundPatient) {
+      const patientId = foundPatient.id || foundPatient._id;
+      
+      try {
+        // Link patient to doctor on the server (persist the relationship)
+        await usersAPI.linkPatient(patientId);
+        console.log('Patient linked successfully:', patientId);
+      } catch (error) {
+        console.error('Failed to link patient:', error);
+        // Continue anyway - patient will still be added locally
+      }
+      
+      // Check if patient is already in the list
+      const isAlreadyInList = patientsList.some(p => p.id === patientId || p._id === patientId);
+      
+      if (!isAlreadyInList) {
+        // Add to local patients list
+        setPatientsList(prev => [...prev, foundPatient]);
+      }
+      
+      // Select this patient
+      setPrescription({
+        ...prescription,
+        patientId: patientId,
+        patientEmail: foundPatient.email
+      });
+      
+      // Close dialog
+      handleCloseAddExistingPatientDialog();
     }
   };
 
@@ -668,33 +897,34 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
       <Box component="form" onSubmit={handleSubmit}>
         <Grid container spacing={3}>
           <Grid item xs={12}>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexWrap: 'wrap' }}>
               <Autocomplete
-                fullWidth
+                sx={{ flexGrow: 1, minWidth: 250 }}
                 options={patientsList}
                 getOptionLabel={(option) => 
                   option ? `${option.firstName} ${option.lastName} (${option.email})` : ''
                 }
-                value={patientsList.find(p => p.id === prescription.patientId) || null}
+                value={patientsList.find(p => (p.id === prescription.patientId) || (p._id === prescription.patientId)) || null}
                 onChange={(event, newValue) => {
                   setPrescription({
                     ...prescription,
-                    patientId: newValue?.id || '',
+                    patientId: newValue?.id || newValue?._id || '',
                     patientEmail: newValue?.email || ''
                   });
                 }}
-                isOptionEqualToValue={(option, value) => option.id === value?.id}
-                noOptionsText="No patients found - Create a new patient"
+                isOptionEqualToValue={(option, value) => (option.id === value?.id) || (option._id === value?._id)}
+                noOptionsText={patientsList.length === 0 ? "No patients yet - Add a new or existing patient" : "No matching patients"}
                 renderInput={(params) => (
                   <TextField
                     {...params}
                     label="Select Patient"
                     required
-                    placeholder="Type to search patients..."
+                    placeholder="Type to search your patients..."
+                    helperText="Only showing patients you have prescribed to before"
                   />
                 )}
                 renderOption={(props, option) => (
-                  <li {...props} key={option.id}>
+                  <li {...props} key={option.id || option._id}>
                     <Box>
                       <Typography variant="body1">
                         {option.firstName} {option.lastName}
@@ -706,15 +936,28 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
                   </li>
                 )}
               />
-              <Button
-                variant="outlined"
-                color="primary"
-                startIcon={<PersonAddIcon />}
-                onClick={handleOpenNewPatientDialog}
-                sx={{ minWidth: 160, height: 56 }}
-              >
-                New Patient
-              </Button>
+              <Box sx={{ display: 'flex', gap: 1, flexDirection: 'column' }}>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<PersonAddIcon />}
+                  onClick={handleOpenNewPatientDialog}
+                  sx={{ minWidth: 180, height: 40 }}
+                  size="small"
+                >
+                  New Patient
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  startIcon={<PersonSearchIcon />}
+                  onClick={handleOpenAddExistingPatientDialog}
+                  sx={{ minWidth: 180, height: 40 }}
+                  size="small"
+                >
+                  Add Existing
+                </Button>
+              </Box>
             </Box>
           </Grid>
           
@@ -1066,6 +1309,232 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
             startIcon={creatingPatient ? <CircularProgress size={20} /> : <PersonAddIcon />}
           >
             {creatingPatient ? 'Creating...' : 'Create Patient'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add Existing Patient Dialog */}
+      <Dialog open={addExistingPatientDialogOpen} onClose={handleCloseAddExistingPatientDialog} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <PersonSearchIcon color="secondary" />
+          Add Existing Patient
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2, mt: 1 }}>
+            Find a patient by entering their ID, scanning their QR code, or uploading a QR image.
+          </Typography>
+          
+          {/* Tabs for different input methods */}
+          <Tabs 
+            value={lookupTabValue} 
+            onChange={async (e, newValue) => {
+              // Stop camera when switching tabs
+              if (lookupTabValue === 1 && newValue !== 1) {
+                await stopCameraAsync();
+              }
+              setLookupTabValue(newValue);
+              setCameraError('');
+            }}
+            variant="fullWidth"
+            sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
+          >
+            <Tab icon={<PersonSearchIcon />} label="Manual" iconPosition="start" />
+            <Tab icon={<CameraAltIcon />} label="Scan QR" iconPosition="start" />
+            <Tab icon={<UploadFileIcon />} label="Upload QR" iconPosition="start" />
+          </Tabs>
+
+          {lookupError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {lookupError}
+            </Alert>
+          )}
+
+          {cameraError && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {cameraError}
+            </Alert>
+          )}
+
+          {/* Manual Entry Tab */}
+          {lookupTabValue === 0 && (
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+              <TextField
+                fullWidth
+                label="Patient ID"
+                value={patientIdToLookup}
+                onChange={(e) => setPatientIdToLookup(e.target.value)}
+                placeholder="Enter patient ID"
+                helperText="Ask the patient to share their Patient ID from their profile"
+                disabled={lookingUpPatient}
+              />
+              <Button
+                variant="contained"
+                onClick={handleLookupPatient}
+                disabled={lookingUpPatient || !patientIdToLookup.trim()}
+                sx={{ height: 56, minWidth: 120 }}
+              >
+                {lookingUpPatient ? <CircularProgress size={24} /> : 'Look Up'}
+              </Button>
+            </Box>
+          )}
+
+          {/* Camera Scan Tab */}
+          {lookupTabValue === 1 && (
+            <Box sx={{ textAlign: 'center' }}>
+              <Box 
+                sx={{ 
+                  width: '100%', 
+                  maxWidth: 400, 
+                  mx: 'auto', 
+                  mb: 2,
+                  minHeight: 300,
+                  bgcolor: 'grey.100',
+                  borderRadius: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  position: 'relative'
+                }}
+              >
+                {/* This div is managed by html5-qrcode - keep it outside React's control */}
+                <div 
+                  id="qr-reader" 
+                  style={{ 
+                    width: '100%', 
+                    height: '100%',
+                    position: isCameraActive ? 'relative' : 'absolute'
+                  }}
+                />
+                {!isCameraActive && (
+                  <Typography color="text.secondary" sx={{ position: 'absolute' }}>
+                    Click "Start Camera" to begin scanning
+                  </Typography>
+                )}
+              </Box>
+              
+              {!isCameraActive ? (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<CameraAltIcon />}
+                  onClick={startCamera}
+                  size="large"
+                >
+                  Start Camera
+                </Button>
+              ) : (
+                <Button
+                  variant="outlined"
+                  color="error"
+                  startIcon={<StopIcon />}
+                  onClick={stopCamera}
+                  size="large"
+                >
+                  Stop Camera
+                </Button>
+              )}
+              
+              <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 2 }}>
+                Point your camera at the patient's QR code
+              </Typography>
+            </Box>
+          )}
+
+          {/* File Upload Tab */}
+          {lookupTabValue === 2 && (
+            <Box sx={{ textAlign: 'center' }}>
+              {/* Hidden div for html5-qrcode file scanning */}
+              <div id="qr-file-reader" style={{ display: 'none' }}></div>
+              
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                style={{ display: 'none' }}
+                id="qr-file-input"
+              />
+              
+              <Box 
+                sx={{ 
+                  border: '2px dashed',
+                  borderColor: 'grey.400',
+                  borderRadius: 2,
+                  p: 4,
+                  mb: 2,
+                  bgcolor: 'grey.50',
+                  cursor: 'pointer',
+                  '&:hover': { borderColor: 'primary.main', bgcolor: 'primary.50' }
+                }}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <UploadFileIcon sx={{ fontSize: 48, color: 'grey.500', mb: 1 }} />
+                <Typography variant="body1" color="text.secondary">
+                  Click to upload a QR code image
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Supports JPG, PNG, GIF
+                </Typography>
+              </Box>
+              
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<UploadFileIcon />}
+                onClick={() => fileInputRef.current?.click()}
+                size="large"
+              >
+                Choose Image
+              </Button>
+            </Box>
+          )}
+
+          {/* Scanned ID display */}
+          {patientIdToLookup && lookupTabValue !== 0 && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'info.50', borderRadius: 1, border: '1px solid', borderColor: 'info.light' }}>
+              <Typography variant="caption" color="info.main">Scanned Patient ID:</Typography>
+              <Typography variant="body1" sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                {patientIdToLookup}
+              </Typography>
+            </Box>
+          )}
+
+          {foundPatient && (
+            <Paper elevation={2} sx={{ mt: 3, p: 2, bgcolor: 'success.50', border: '1px solid', borderColor: 'success.main' }}>
+              <Typography variant="subtitle2" color="success.main" gutterBottom>
+                Patient Found!
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box>
+                  <Typography variant="h6">
+                    {foundPatient.firstName} {foundPatient.lastName}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {foundPatient.email}
+                  </Typography>
+                  {foundPatient.contactNumber && (
+                    <Typography variant="body2" color="text.secondary">
+                      Phone: {foundPatient.contactNumber}
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+            </Paper>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={handleCloseAddExistingPatientDialog}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleAddFoundPatient}
+            disabled={!foundPatient}
+            startIcon={<PersonAddIcon />}
+          >
+            Add Patient
           </Button>
         </DialogActions>
       </Dialog>

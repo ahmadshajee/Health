@@ -52,6 +52,23 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  clinicAddress: {
+    type: String,
+    default: ''
+  },
+  experience: {
+    type: String,
+    default: ''
+  },
+  qualifications: {
+    type: String,
+    default: ''
+  },
+  // Doctor's linked patients (patients added via "Add Existing")
+  linkedPatients: {
+    type: [String], // Array of patient IDs
+    default: []
+  },
   // Patient-specific fields
   dateOfBirth: {
     type: String,

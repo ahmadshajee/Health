@@ -52,7 +52,12 @@ import {
   Delete as DeleteIcon,
   Refresh as RefreshIcon,
   CameraAlt as CameraAltIcon,
-  Menu as MenuIcon
+  Menu as MenuIcon,
+  Visibility as VisibilityIcon,
+  Download as DownloadIcon,
+  Close as CloseIcon,
+  LocalHospital as LocalHospitalIcon,
+  Medication as MedicationIcon
 } from '@mui/icons-material';
 import axios from 'axios';
 
@@ -135,6 +140,8 @@ const AppContent = () => {
   const [prescriptionsLoading, setPrescriptionsLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [confirmDialog, setConfirmDialog] = useState({ open: false, prescriptionId: null, action: null });
+  const [viewPrescriptionDialog, setViewPrescriptionDialog] = useState({ open: false, prescription: null });
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   // Security settings state
   const [securityForm, setSecurityForm] = useState({
@@ -142,7 +149,15 @@ const AppContent = () => {
     lastName: '',
     currentPassword: '',
     newPassword: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    // Doctor-specific fields
+    specialization: '',
+    licenseNumber: '',
+    contactNumber: '',
+    email: '',
+    clinicAddress: '',
+    experience: '',
+    qualifications: ''
   });
   const [securityLoading, setSecurityLoading] = useState(false);
 
@@ -443,7 +458,14 @@ const AppContent = () => {
       setSecurityForm(prev => ({
         ...prev,
         firstName: user.firstName || '',
-        lastName: user.lastName || ''
+        lastName: user.lastName || '',
+        specialization: user.specialization || '',
+        licenseNumber: user.licenseNumber || '',
+        contactNumber: user.contactNumber || user.phone || '',
+        email: user.email || '',
+        clinicAddress: user.clinicAddress || user.address || '',
+        experience: user.experience || '',
+        qualifications: user.qualifications || ''
       }));
     }
   }, [user]);
@@ -503,6 +525,43 @@ const AppContent = () => {
     setConfirmDialog({ open: false, prescriptionId: null, action: null });
   };
 
+  // Handle viewing prescription details
+  const handleViewPrescription = (prescription) => {
+    setViewPrescriptionDialog({ open: true, prescription });
+  };
+
+  // Handle downloading prescription PDF
+  const handleDownloadPdf = async (prescription) => {
+    // Handle both prescription object and prescription ID
+    const prescriptionId = typeof prescription === 'object' ? (prescription.id || prescription._id) : prescription;
+    
+    setDownloadingPdf(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_BASE_URL}/api/prescriptions/${prescriptionId}/download`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `prescription-${prescriptionId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      setSnackbar({ open: true, message: 'PDF downloaded successfully', severity: 'success' });
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      setSnackbar({ open: true, message: 'Failed to download PDF', severity: 'error' });
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   const handleOpenAuthDialog = (tabValue = 0) => {
     setAuthTabValue(tabValue);
     setAuthDialogOpen(true);
@@ -533,14 +592,29 @@ const AppContent = () => {
     setSecurityLoading(true);
     try {
       const token = localStorage.getItem('token');
+      const updateData = { 
+        firstName: securityForm.firstName, 
+        lastName: securityForm.lastName 
+      };
+      
+      // Include doctor-specific fields if user is a doctor
+      if (user?.role === 'doctor') {
+        updateData.specialization = securityForm.specialization;
+        updateData.licenseNumber = securityForm.licenseNumber;
+        updateData.contactNumber = securityForm.contactNumber;
+        updateData.clinicAddress = securityForm.clinicAddress;
+        updateData.experience = securityForm.experience;
+        updateData.qualifications = securityForm.qualifications;
+      }
+      
       await axios.put(`${API_BASE_URL}/api/users/profile`, 
-        { firstName: securityForm.firstName, lastName: securityForm.lastName },
+        updateData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setSnackbar({ open: true, message: 'Name updated successfully', severity: 'success' });
+      setSnackbar({ open: true, message: 'Profile updated successfully', severity: 'success' });
     } catch (error) {
-      console.error('Error updating name:', error);
-      setSnackbar({ open: true, message: 'Failed to update name', severity: 'error' });
+      console.error('Error updating profile:', error);
+      setSnackbar({ open: true, message: 'Failed to update profile', severity: 'error' });
     } finally {
       setSecurityLoading(false);
     }
@@ -865,14 +939,16 @@ const AppContent = () => {
             <Grid item xs={12} md={4}>
               <Card>
                 <CardContent>
-                  <Avatar sx={{ bgcolor: 'error.main', mb: 2 }}>
-                    <SecurityIcon />
+                  <Avatar sx={{ bgcolor: user?.role === 'doctor' ? 'primary.main' : 'error.main', mb: 2 }}>
+                    {user?.role === 'doctor' ? <PersonIcon /> : <SecurityIcon />}
                   </Avatar>
                   <Typography variant="h5" component="div" gutterBottom>
-                    Security Settings
+                    {user?.role === 'doctor' ? 'My Profile' : 'Security Settings'}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Update your password and security preferences. Manage your account security.
+                    {user?.role === 'doctor' 
+                      ? 'Update your professional information, specialization, contact details, and security settings.'
+                      : 'Update your password and security preferences. Manage your account security.'}
                   </Typography>
                 </CardContent>
                 <CardActions>
@@ -880,7 +956,7 @@ const AppContent = () => {
                     size="small"
                     onClick={() => setActiveContent('security')}
                   >
-                    Manage Security
+                    {user?.role === 'doctor' ? 'Edit Profile' : 'Manage Security'}
                   </Button>
                 </CardActions>
               </Card>
@@ -978,6 +1054,16 @@ const AppContent = () => {
                                 <TableCell align="center">
                                   <Button
                                     size="small"
+                                    variant="contained"
+                                    color="primary"
+                                    startIcon={<VisibilityIcon />}
+                                    onClick={() => handleViewPrescription(prescription)}
+                                    sx={{ mr: 1 }}
+                                  >
+                                    View
+                                  </Button>
+                                  <Button
+                                    size="small"
                                     variant="outlined"
                                     color="warning"
                                     startIcon={<CancelIcon />}
@@ -1049,6 +1135,16 @@ const AppContent = () => {
                                   <Chip label="Completed" color="default" size="small" />
                                 </TableCell>
                                 <TableCell align="center">
+                                  <Button
+                                    size="small"
+                                    variant="contained"
+                                    color="primary"
+                                    startIcon={<VisibilityIcon />}
+                                    onClick={() => handleViewPrescription(prescription)}
+                                    sx={{ mr: 1 }}
+                                  >
+                                    View
+                                  </Button>
                                   <Button
                                     size="small"
                                     variant="outlined"
@@ -1143,6 +1239,145 @@ const AppContent = () => {
                     {snackbar.message}
                   </Alert>
                 </Snackbar>
+
+                {/* View Prescription Dialog */}
+                <Dialog 
+                  open={viewPrescriptionDialog.open} 
+                  onClose={() => setViewPrescriptionDialog({ open: false, prescription: null })}
+                  maxWidth="md"
+                  fullWidth
+                >
+                  <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'primary.main', color: 'white' }}>
+                    <Box display="flex" alignItems="center">
+                      <MedicationIcon sx={{ mr: 1 }} />
+                      Prescription Details
+                    </Box>
+                    <IconButton onClick={() => setViewPrescriptionDialog({ open: false, prescription: null })} sx={{ color: 'white' }}>
+                      <CloseIcon />
+                    </IconButton>
+                  </DialogTitle>
+                  <DialogContent sx={{ mt: 2 }}>
+                    {viewPrescriptionDialog.prescription && (
+                      <Box>
+                        {/* Patient & Doctor Info */}
+                        <Grid container spacing={3} sx={{ mb: 3 }}>
+                          <Grid item xs={12} md={6}>
+                            <Paper elevation={1} sx={{ p: 2, bgcolor: 'grey.50' }}>
+                              <Typography variant="subtitle2" color="primary" gutterBottom>
+                                <PersonIcon sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} />
+                                Patient Information
+                              </Typography>
+                              <Typography variant="body1" fontWeight="bold">
+                                {viewPrescriptionDialog.prescription.patientName || 'N/A'}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {viewPrescriptionDialog.prescription.patientEmail}
+                              </Typography>
+                            </Paper>
+                          </Grid>
+                          <Grid item xs={12} md={6}>
+                            <Paper elevation={1} sx={{ p: 2, bgcolor: 'grey.50' }}>
+                              <Typography variant="subtitle2" color="primary" gutterBottom>
+                                <LocalHospitalIcon sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} />
+                                Prescription Info
+                              </Typography>
+                              <Typography variant="body2">
+                                <strong>Date:</strong> {new Date(viewPrescriptionDialog.prescription.createdAt).toLocaleDateString()}
+                              </Typography>
+                              <Typography variant="body2">
+                                <strong>Status:</strong>{' '}
+                                <Chip 
+                                  label={viewPrescriptionDialog.prescription.status} 
+                                  color={viewPrescriptionDialog.prescription.status === 'active' ? 'success' : 'default'} 
+                                  size="small" 
+                                />
+                              </Typography>
+                            </Paper>
+                          </Grid>
+                        </Grid>
+
+                        {/* Diagnosis */}
+                        <Paper elevation={1} sx={{ p: 2, mb: 3, bgcolor: 'info.50', border: '1px solid', borderColor: 'info.light' }}>
+                          <Typography variant="subtitle2" color="info.main" gutterBottom>
+                            Diagnosis
+                          </Typography>
+                          <Typography variant="body1" fontWeight="medium">
+                            {viewPrescriptionDialog.prescription.diagnosis}
+                          </Typography>
+                        </Paper>
+
+                        {/* Medications */}
+                        <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                          <MedicationIcon sx={{ mr: 1, color: 'primary.main' }} />
+                          Medications
+                        </Typography>
+                        <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow sx={{ bgcolor: 'primary.light' }}>
+                                <TableCell><strong>Medication</strong></TableCell>
+                                <TableCell><strong>Dosage</strong></TableCell>
+                                <TableCell><strong>Frequency</strong></TableCell>
+                                <TableCell><strong>Duration</strong></TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {viewPrescriptionDialog.prescription.medications?.map((med, index) => (
+                                <TableRow key={index} hover>
+                                  <TableCell>{med.name}</TableCell>
+                                  <TableCell>{med.dosage}</TableCell>
+                                  <TableCell>{med.frequency}</TableCell>
+                                  <TableCell>{med.duration}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+
+                        {/* Doctor Notes */}
+                        {viewPrescriptionDialog.prescription.notes && (
+                          <Paper elevation={1} sx={{ p: 2, mb: 3, bgcolor: 'warning.50', border: '1px solid', borderColor: 'warning.light' }}>
+                            <Typography variant="subtitle2" color="warning.dark" gutterBottom>
+                              Doctor's Notes
+                            </Typography>
+                            <Typography variant="body2">
+                              {viewPrescriptionDialog.prescription.notes}
+                            </Typography>
+                          </Paper>
+                        )}
+
+                        {/* QR Code */}
+                        {viewPrescriptionDialog.prescription.qrCode && (
+                          <Box textAlign="center" sx={{ mb: 2 }}>
+                            <Typography variant="subtitle2" gutterBottom>
+                              Prescription QR Code
+                            </Typography>
+                            <Box 
+                              component="img" 
+                              src={viewPrescriptionDialog.prescription.qrCode} 
+                              alt="QR Code"
+                              sx={{ width: 150, height: 150, border: '1px solid', borderColor: 'grey.300', borderRadius: 1 }}
+                            />
+                          </Box>
+                        )}
+                      </Box>
+                    )}
+                  </DialogContent>
+                  <DialogActions sx={{ p: 2, bgcolor: 'grey.100' }}>
+                    <Button onClick={() => setViewPrescriptionDialog({ open: false, prescription: null })}>
+                      Close
+                    </Button>
+                    <Button 
+                      variant="contained" 
+                      color="primary"
+                      startIcon={downloadingPdf ? <CircularProgress size={16} color="inherit" /> : <DownloadIcon />}
+                      onClick={() => handleDownloadPdf(viewPrescriptionDialog.prescription)}
+                      disabled={downloadingPdf}
+                    >
+                      {downloadingPdf ? 'Downloading...' : 'Download PDF'}
+                    </Button>
+                  </DialogActions>
+                </Dialog>
               </Paper>
             )}
             
@@ -1242,6 +1477,66 @@ const AppContent = () => {
                               </Typography>
                               <Chip label={user?.role === 'doctor' ? 'Doctor' : 'Patient'} size="small" color="primary" sx={{ mt: 1 }} />
                             </Box>
+                            
+                            {/* Patient ID Section - Only for Patients */}
+                            {user?.role === 'patient' && (
+                              <Paper elevation={1} sx={{ p: 2, mb: 2, bgcolor: 'primary.50', border: '1px solid', borderColor: 'primary.light' }}>
+                                <Typography variant="subtitle2" color="primary" gutterBottom>
+                                  Your Patient ID
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                                  Share this ID or QR code with your doctor to add you as a patient
+                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                                  <Box sx={{ flexGrow: 1 }}>
+                                    <Typography 
+                                      variant="body1" 
+                                      sx={{ 
+                                        fontFamily: 'monospace', 
+                                        bgcolor: 'white', 
+                                        p: 1, 
+                                        borderRadius: 1,
+                                        border: '1px solid',
+                                        borderColor: 'grey.300',
+                                        wordBreak: 'break-all'
+                                      }}
+                                    >
+                                      {user?.id || user?._id || 'Loading...'}
+                                    </Typography>
+                                    <Button 
+                                      size="small" 
+                                      sx={{ mt: 1 }}
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(user?.id || user?._id || '');
+                                        setSnackbar({ open: true, message: 'Patient ID copied to clipboard!', severity: 'success' });
+                                      }}
+                                    >
+                                      Copy ID
+                                    </Button>
+                                  </Box>
+                                  <Box sx={{ textAlign: 'center' }}>
+                                    <Box 
+                                      component="img"
+                                      src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(user?.id || user?._id || '')}`}
+                                      alt="Patient QR Code"
+                                      sx={{ 
+                                        width: 100, 
+                                        height: 100, 
+                                        border: '1px solid', 
+                                        borderColor: 'grey.300',
+                                        borderRadius: 1,
+                                        bgcolor: 'white',
+                                        p: 0.5
+                                      }}
+                                    />
+                                    <Typography variant="caption" color="text.secondary" display="block">
+                                      Scan to share
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              </Paper>
+                            )}
+                            
                             <Grid container spacing={2} sx={{ mt: 1 }}>
                               <Grid item xs={6}>
                                 <Typography variant="body2" color="text.secondary">Date of Birth</Typography>
@@ -1686,41 +1981,144 @@ const AppContent = () => {
             )}
             
             {activeContent === 'security' && (
-              <Box sx={{ maxWidth: 600, mx: 'auto', mt: 4 }}>
+              <Box sx={{ maxWidth: 700, mx: 'auto', mt: 4 }}>
                 <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
-                  Security Settings
+                  {user?.role === 'doctor' ? 'Doctor Profile' : 'Profile Settings'}
                 </Typography>
 
-                {/* Update Name Section */}
+                {/* Basic Information Section */}
                 <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
                   <Typography variant="h6" gutterBottom color="primary">
-                    Update Name
+                    Basic Information
                   </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <TextField
-                      label="First Name"
-                      value={securityForm.firstName}
-                      onChange={handleSecurityFormChange('firstName')}
-                      fullWidth
-                      variant="outlined"
-                    />
-                    <TextField
-                      label="Last Name"
-                      value={securityForm.lastName}
-                      onChange={handleSecurityFormChange('lastName')}
-                      fullWidth
-                      variant="outlined"
-                    />
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      onClick={handleUpdateName}
-                      disabled={securityLoading}
-                      sx={{ alignSelf: 'flex-start' }}
-                    >
-                      {securityLoading ? 'Saving...' : 'Save Name'}
-                    </Button>
-                  </Box>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        label="First Name"
+                        value={securityForm.firstName}
+                        onChange={handleSecurityFormChange('firstName')}
+                        fullWidth
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        label="Last Name"
+                        value={securityForm.lastName}
+                        onChange={handleSecurityFormChange('lastName')}
+                        fullWidth
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        label="Email"
+                        value={securityForm.email}
+                        fullWidth
+                        variant="outlined"
+                        disabled
+                        helperText="Email cannot be changed"
+                      />
+                    </Grid>
+                  </Grid>
+                </Paper>
+
+                {/* Doctor-specific Professional Information */}
+                {user?.role === 'doctor' && (
+                  <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+                    <Typography variant="h6" gutterBottom color="primary">
+                      Professional Information
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="Specialization"
+                          value={securityForm.specialization}
+                          onChange={handleSecurityFormChange('specialization')}
+                          fullWidth
+                          variant="outlined"
+                          placeholder="e.g., Cardiologist, General Physician"
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="License Number"
+                          value={securityForm.licenseNumber}
+                          onChange={handleSecurityFormChange('licenseNumber')}
+                          fullWidth
+                          variant="outlined"
+                          placeholder="Medical license number"
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="Years of Experience"
+                          value={securityForm.experience}
+                          onChange={handleSecurityFormChange('experience')}
+                          fullWidth
+                          variant="outlined"
+                          placeholder="e.g., 10 years"
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="Qualifications"
+                          value={securityForm.qualifications}
+                          onChange={handleSecurityFormChange('qualifications')}
+                          fullWidth
+                          variant="outlined"
+                          placeholder="e.g., MBBS, MD, FRCP"
+                        />
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                )}
+
+                {/* Contact Information - for doctors */}
+                {user?.role === 'doctor' && (
+                  <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+                    <Typography variant="h6" gutterBottom color="primary">
+                      Contact Information
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="Contact Number"
+                          value={securityForm.contactNumber}
+                          onChange={handleSecurityFormChange('contactNumber')}
+                          fullWidth
+                          variant="outlined"
+                          placeholder="Phone number for patients"
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <TextField
+                          label="Clinic/Hospital Address"
+                          value={securityForm.clinicAddress}
+                          onChange={handleSecurityFormChange('clinicAddress')}
+                          fullWidth
+                          variant="outlined"
+                          multiline
+                          rows={2}
+                          placeholder="Your clinic or hospital address"
+                        />
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                )}
+
+                {/* Save Profile Button */}
+                <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleUpdateName}
+                    disabled={securityLoading}
+                    fullWidth
+                    size="large"
+                  >
+                    {securityLoading ? 'Saving...' : 'Save Profile'}
+                  </Button>
                 </Paper>
 
                 {/* Change Password Section */}

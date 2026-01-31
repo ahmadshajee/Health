@@ -173,13 +173,43 @@ export const prescriptionsAPI = {
 
 // Users API
 export const usersAPI = {
-  // Get all patients (doctors only)
+  // Get all patients (doctors only) - DEPRECATED for security, use getMyPatients instead
   getPatients: async () => {
     try {
       const response = await api.get('/users/patients');
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'Failed to fetch patients' };
+    }
+  },
+
+  // Get only patients that the doctor has prescribed to (secure)
+  getMyPatients: async () => {
+    try {
+      const response = await api.get('/users/patients/my-patients');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Failed to fetch my patients' };
+    }
+  },
+
+  // Look up a patient by their ID (for adding existing patients)
+  lookupPatientById: async (patientId) => {
+    try {
+      const response = await api.get(`/users/patients/lookup/${patientId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Failed to find patient' };
+    }
+  },
+
+  // Link a patient to the doctor (persist the relationship)
+  linkPatient: async (patientId) => {
+    try {
+      const response = await api.post(`/users/patients/link/${patientId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Failed to link patient' };
     }
   },
 

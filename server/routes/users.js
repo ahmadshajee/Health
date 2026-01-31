@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { getUsers, findUserById, updateUser, createUser } = require('../models/user');
+const { findPrescriptionsByDoctorId } = require('../models/prescription');
 const { auth, doctor, patient } = require('../middleware/auth');
 
 // Configure multer for profile picture uploads
@@ -183,6 +184,138 @@ router.get('/patients', doctor, async (req, res) => {
 });
 
 /**
+ * @route   GET /api/users/patients/my-patients
+ * @desc    Get only patients that this doctor has prescribed to OR linked (security improvement)
+ * @access  Private (Doctor)
+ */
+router.get('/patients/my-patients', doctor, async (req, res) => {
+  console.log('GET /patients/my-patients endpoint hit');
+  console.log('User:', req.user);
+  try {
+    const doctorId = req.user.id;
+    
+    // Get all prescriptions for this doctor
+    const prescriptions = await findPrescriptionsByDoctorId(doctorId);
+    
+    // Get unique patient IDs from prescriptions
+    const prescriptionPatientIds = prescriptions.map(p => p.patientId?.toString() || p.patientId);
+    
+    // Get doctor's linked patients
+    const doctorData = await findUserById(doctorId);
+    const linkedPatientIds = doctorData?.linkedPatients || [];
+    
+    // Combine and deduplicate patient IDs
+    const allPatientIds = [...new Set([...prescriptionPatientIds, ...linkedPatientIds])];
+    
+    // Get patient details for each unique patient ID
+    const patients = [];
+    for (const patientId of allPatientIds) {
+      const patient = await findUserById(patientId);
+      if (patient && patient.role === 'patient') {
+        const { password, ...patientData } = patient;
+        patients.push(patientData);
+      }
+    }
+
+    console.log('Doctor\'s patients:', patients.length);
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.json({
+      message: 'My patients retrieved successfully',
+      patients
+    });
+  } catch (error) {
+    console.error('Get my patients error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/**
+ * @route   GET /api/users/patients/lookup/:patientId
+ * @desc    Look up a patient by their ID (for adding existing patients)
+ * @access  Private (Doctor)
+ */
+router.get('/patients/lookup/:patientId', doctor, async (req, res) => {
+  console.log('GET /patients/lookup/:patientId endpoint hit');
+  try {
+    const { patientId } = req.params;
+    
+    const patient = await findUserById(patientId);
+    
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient not found. Please check the Patient ID.' });
+    }
+    
+    if (patient.role !== 'patient') {
+      return res.status(400).json({ message: 'The provided ID does not belong to a patient.' });
+    }
+    
+    // Return patient data without password
+    const { password, ...patientData } = patient;
+    
+    res.json({
+      message: 'Patient found',
+      patient: patientData
+    });
+  } catch (error) {
+    console.error('Lookup patient error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/**
+ * @route   POST /api/users/patients/link/:patientId
+ * @desc    Link an existing patient to this doctor
+ * @access  Private (Doctor)
+ */
+router.post('/patients/link/:patientId', doctor, async (req, res) => {
+  console.log('POST /patients/link/:patientId endpoint hit');
+  try {
+    const { patientId } = req.params;
+    const doctorId = req.user.id;
+    
+    // Verify patient exists
+    const patient = await findUserById(patientId);
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient not found' });
+    }
+    
+    if (patient.role !== 'patient') {
+      return res.status(400).json({ message: 'The provided ID does not belong to a patient.' });
+    }
+    
+    // Get current doctor and add patient to linkedPatients
+    const doctor = await findUserById(doctorId);
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor not found' });
+    }
+    
+    // Initialize linkedPatients if not exists
+    const linkedPatients = doctor.linkedPatients || [];
+    
+    // Check if already linked
+    if (linkedPatients.includes(patientId)) {
+      return res.json({ message: 'Patient already linked', patient: patient });
+    }
+    
+    // Add patient to linked list
+    linkedPatients.push(patientId);
+    await updateUser(doctorId, { linkedPatients });
+    
+    console.log('Patient linked to doctor:', patientId, '->', doctorId);
+    
+    // Return patient data
+    const { password, ...patientData } = patient;
+    res.json({
+      message: 'Patient linked successfully',
+      patient: patientData
+    });
+  } catch (error) {
+    console.error('Link patient error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/**
  * @route   GET /api/users/patients/lookup
  * @desc    Get patients lookup data for prescription creation
  * @access  Private (Doctor)
@@ -271,13 +404,36 @@ router.get('/profile', auth, async (req, res) => {
  */
 router.put('/profile', auth, async (req, res) => {
   try {
-    const { firstName, lastName, contactNumber, specialization, dateOfBirth, address, phone, bloodType, allergies, chronicConditions, emergencyContact, gender } = req.body;
+    const { 
+      firstName, 
+      lastName, 
+      contactNumber, 
+      specialization, 
+      licenseNumber,
+      clinicAddress,
+      experience,
+      qualifications,
+      dateOfBirth, 
+      address, 
+      phone, 
+      bloodType, 
+      allergies, 
+      chronicConditions, 
+      emergencyContact, 
+      gender 
+    } = req.body;
     
     const updateData = {
       firstName,
       lastName,
       contactNumber,
-      ...(req.user.role === 'doctor' && { specialization }),
+      ...(req.user.role === 'doctor' && { 
+        specialization, 
+        licenseNumber,
+        clinicAddress,
+        experience,
+        qualifications
+      }),
       ...(req.user.role === 'patient' && { dateOfBirth, address, phone, bloodType, allergies, chronicConditions, emergencyContact, gender })
     };
 
