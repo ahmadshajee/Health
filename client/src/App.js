@@ -57,7 +57,8 @@ import {
   Download as DownloadIcon,
   Close as CloseIcon,
   LocalHospital as LocalHospitalIcon,
-  Medication as MedicationIcon
+  Medication as MedicationIcon,
+  QrCode as QrCodeIcon
 } from '@mui/icons-material';
 import axios from 'axios';
 
@@ -143,6 +144,7 @@ const AppContent = () => {
   const [confirmDialog, setConfirmDialog] = useState({ open: false, prescriptionId: null, action: null });
   const [viewPrescriptionDialog, setViewPrescriptionDialog] = useState({ open: false, prescription: null });
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [qrCodeDialogOpen, setQrCodeDialogOpen] = useState(false);
 
   // Security settings state
   const [securityForm, setSecurityForm] = useState({
@@ -1530,6 +1532,74 @@ const AppContent = () => {
                     </Button>
                   </DialogActions>
                 </Dialog>
+
+                {/* QR Code Enlarge Dialog */}
+                <Dialog 
+                  open={qrCodeDialogOpen} 
+                  onClose={() => setQrCodeDialogOpen(false)}
+                  maxWidth="sm"
+                  fullWidth
+                >
+                  <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'primary.main', color: 'white' }}>
+                    <Box display="flex" alignItems="center">
+                      <QrCodeIcon sx={{ mr: 1 }} />
+                      Your Patient QR Code
+                    </Box>
+                    <IconButton onClick={() => setQrCodeDialogOpen(false)} sx={{ color: 'white' }}>
+                      <CloseIcon />
+                    </IconButton>
+                  </DialogTitle>
+                  <DialogContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4 }}>
+                    <Box 
+                      component="img"
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(user?.id || user?._id || '')}`}
+                      alt="Patient QR Code"
+                      sx={{ 
+                        width: 300, 
+                        height: 300, 
+                        border: '2px solid', 
+                        borderColor: 'primary.main',
+                        borderRadius: 2,
+                        bgcolor: 'white',
+                        p: 1,
+                        mb: 2
+                      }}
+                    />
+                    <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 1 }}>
+                      Show this QR code to your doctor
+                    </Typography>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        fontFamily: 'monospace', 
+                        bgcolor: 'grey.100', 
+                        p: 1.5, 
+                        borderRadius: 1,
+                        wordBreak: 'break-all',
+                        textAlign: 'center'
+                      }}
+                    >
+                      {user?.id || user?._id || 'Loading...'}
+                    </Typography>
+                  </DialogContent>
+                  <DialogActions sx={{ justifyContent: 'center', pb: 2 }}>
+                    <Button 
+                      variant="outlined"
+                      onClick={() => {
+                        navigator.clipboard.writeText(user?.id || user?._id || '');
+                        setSnackbar({ open: true, message: 'Patient ID copied to clipboard!', severity: 'success' });
+                      }}
+                    >
+                      Copy ID
+                    </Button>
+                    <Button 
+                      variant="contained"
+                      onClick={() => setQrCodeDialogOpen(false)}
+                    >
+                      Close
+                    </Button>
+                  </DialogActions>
+                </Dialog>
               </Paper>
             )}
             
@@ -1671,6 +1741,7 @@ const AppContent = () => {
                                       component="img"
                                       src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(user?.id || user?._id || '')}`}
                                       alt="Patient QR Code"
+                                      onClick={() => setQrCodeDialogOpen(true)}
                                       sx={{ 
                                         width: 100, 
                                         height: 100, 
@@ -1678,11 +1749,20 @@ const AppContent = () => {
                                         borderColor: 'grey.300',
                                         borderRadius: 1,
                                         bgcolor: 'white',
-                                        p: 0.5
+                                        p: 0.5,
+                                        cursor: 'pointer',
+                                        transition: 'transform 0.2s, box-shadow 0.2s',
+                                        '&:hover': {
+                                          transform: 'scale(1.05)',
+                                          boxShadow: 2
+                                        }
                                       }}
                                     />
                                     <Typography variant="caption" color="text.secondary" display="block">
                                       Scan to share
+                                    </Typography>
+                                    <Typography variant="caption" color="primary" display="block" sx={{ cursor: 'pointer' }} onClick={() => setQrCodeDialogOpen(true)}>
+                                      Click to enlarge
                                     </Typography>
                                   </Box>
                                 </Box>
