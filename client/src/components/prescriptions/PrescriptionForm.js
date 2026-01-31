@@ -542,10 +542,16 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
     try {
       setLoadingPatientPrescriptions(true);
       console.log('Fetching prescriptions for patient:', patientId);
-      const response = await prescriptionsAPI.getAll();
+      const prescriptions = await prescriptionsAPI.getMyPrescriptions();
+      
+      console.log('All prescriptions:', prescriptions);
+      console.log('Looking for patientId:', patientId);
       
       // Filter prescriptions for this specific patient
-      const patientRx = response.prescriptions.filter(rx => rx.patientId === patientId);
+      const patientRx = prescriptions.filter(rx => {
+        console.log('Comparing rx.patientId:', rx.patientId, 'with:', patientId);
+        return rx.patientId === patientId;
+      });
       
       // Sort by date (newest first)
       patientRx.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
