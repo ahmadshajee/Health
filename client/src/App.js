@@ -1559,54 +1559,73 @@ const AppContent = () => {
                 <Dialog 
                   open={qrCodeDialogOpen} 
                   onClose={() => setQrCodeDialogOpen(false)}
-                  maxWidth="sm"
+                  maxWidth="md"
                   fullWidth
+                  PaperProps={{
+                    sx: {
+                      minHeight: '80vh',
+                      maxHeight: '90vh'
+                    }
+                  }}
                 >
-                  <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'primary.main', color: 'white' }}>
+                  <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'primary.main', color: 'white', py: 2 }}>
                     <Box display="flex" alignItems="center">
-                      <QrCodeIcon sx={{ mr: 1 }} />
-                      Your Patient QR Code
+                      <QrCodeIcon sx={{ mr: 1, fontSize: 28 }} />
+                      <Typography variant="h6">Your Patient QR Code</Typography>
                     </Box>
                     <IconButton onClick={() => setQrCodeDialogOpen(false)} sx={{ color: 'white' }}>
                       <CloseIcon />
                     </IconButton>
                   </DialogTitle>
-                  <DialogContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4 }}>
+                  <DialogContent sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    py: 4,
+                    bgcolor: 'grey.50',
+                    flex: 1
+                  }}>
+                    <Typography variant="h6" color="primary" align="center" sx={{ mb: 3 }}>
+                      Show this QR code to your doctor for easy scanning
+                    </Typography>
                     <Box 
                       component="img"
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(user?.id || user?._id || '')}`}
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(user?.id || user?._id || '')}`}
                       alt="Patient QR Code"
                       sx={{ 
-                        width: 300, 
-                        height: 300, 
-                        border: '2px solid', 
+                        width: { xs: '280px', sm: '350px', md: '400px' }, 
+                        height: { xs: '280px', sm: '350px', md: '400px' }, 
+                        border: '4px solid', 
                         borderColor: 'primary.main',
-                        borderRadius: 2,
+                        borderRadius: 3,
                         bgcolor: 'white',
-                        p: 1,
-                        mb: 2
+                        p: 2,
+                        mb: 3,
+                        boxShadow: 4
                       }}
                     />
-                    <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 1 }}>
-                      Show this QR code to your doctor
-                    </Typography>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        fontFamily: 'monospace', 
-                        bgcolor: 'grey.100', 
-                        p: 1.5, 
-                        borderRadius: 1,
-                        wordBreak: 'break-all',
-                        textAlign: 'center'
-                      }}
-                    >
-                      {user?.id || user?._id || 'Loading...'}
-                    </Typography>
+                    <Paper elevation={2} sx={{ p: 2, bgcolor: 'white', maxWidth: '100%' }}>
+                      <Typography variant="caption" color="text.secondary" display="block" align="center" sx={{ mb: 0.5 }}>
+                        Patient ID
+                      </Typography>
+                      <Typography 
+                        variant="body1" 
+                        sx={{ 
+                          fontFamily: 'monospace', 
+                          fontWeight: 'bold',
+                          wordBreak: 'break-all',
+                          textAlign: 'center'
+                        }}
+                      >
+                        {user?.id || user?._id || 'Loading...'}
+                      </Typography>
+                    </Paper>
                   </DialogContent>
-                  <DialogActions sx={{ justifyContent: 'center', pb: 2 }}>
+                  <DialogActions sx={{ justifyContent: 'center', pb: 3, pt: 2, gap: 2, bgcolor: 'grey.100' }}>
                     <Button 
                       variant="outlined"
+                      size="large"
                       onClick={() => {
                         navigator.clipboard.writeText(user?.id || user?._id || '');
                         setSnackbar({ open: true, message: 'Patient ID copied to clipboard!', severity: 'success' });
@@ -1616,9 +1635,11 @@ const AppContent = () => {
                     </Button>
                     <Button 
                       variant="contained"
+                      size="large"
                       onClick={() => setQrCodeDialogOpen(false)}
+                      startIcon={<CloseIcon />}
                     >
-                      Close
+                      Go Back
                     </Button>
                   </DialogActions>
                 </Dialog>
