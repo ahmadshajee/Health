@@ -473,6 +473,8 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
     ],
     testsRequired: [],
     instructions: '',
+    followUpWeeks: '',
+    followUpDays: '',
     followUpDate: ''
   });
 
@@ -925,6 +927,8 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
         ],
         testsRequired: [],
         instructions: '',
+        followUpWeeks: '',
+        followUpDays: '',
         followUpDate: ''
       });
     } catch (error) {
@@ -1431,16 +1435,89 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
             />
           </Grid>
           
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="Follow-up Date"
-              name="followUpDate"
-              type="date"
-              value={prescription.followUpDate}
-              onChange={handleChange}
-              InputLabelProps={{ shrink: true }}
-            />
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+              Follow-up Date
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+              <FormControl sx={{ minWidth: 120 }}>
+                <InputLabel>Weeks</InputLabel>
+                <Select
+                  value={prescription.followUpWeeks || ''}
+                  label="Weeks"
+                  onChange={(e) => {
+                    const weeks = e.target.value;
+                    const days = prescription.followUpDays || 0;
+                    const totalDays = (parseInt(weeks) || 0) * 7 + (parseInt(days) || 0);
+                    const followUpDate = totalDays > 0 
+                      ? new Date(Date.now() + totalDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                      : '';
+                    setPrescription(prev => ({
+                      ...prev,
+                      followUpWeeks: weeks,
+                      followUpDate
+                    }));
+                  }}
+                >
+                  <MenuItem value="">None</MenuItem>
+                  <MenuItem value="1">1 Week</MenuItem>
+                  <MenuItem value="2">2 Weeks</MenuItem>
+                  <MenuItem value="3">3 Weeks</MenuItem>
+                  <MenuItem value="4">4 Weeks</MenuItem>
+                  <MenuItem value="6">6 Weeks</MenuItem>
+                  <MenuItem value="8">8 Weeks</MenuItem>
+                  <MenuItem value="12">12 Weeks</MenuItem>
+                </Select>
+              </FormControl>
+              
+              <FormControl sx={{ minWidth: 120 }}>
+                <InputLabel>Days</InputLabel>
+                <Select
+                  value={prescription.followUpDays || ''}
+                  label="Days"
+                  onChange={(e) => {
+                    const days = e.target.value;
+                    const weeks = prescription.followUpWeeks || 0;
+                    const totalDays = (parseInt(weeks) || 0) * 7 + (parseInt(days) || 0);
+                    const followUpDate = totalDays > 0 
+                      ? new Date(Date.now() + totalDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                      : '';
+                    setPrescription(prev => ({
+                      ...prev,
+                      followUpDays: days,
+                      followUpDate
+                    }));
+                  }}
+                >
+                  <MenuItem value="">None</MenuItem>
+                  <MenuItem value="1">1 Day</MenuItem>
+                  <MenuItem value="2">2 Days</MenuItem>
+                  <MenuItem value="3">3 Days</MenuItem>
+                  <MenuItem value="4">4 Days</MenuItem>
+                  <MenuItem value="5">5 Days</MenuItem>
+                  <MenuItem value="6">6 Days</MenuItem>
+                </Select>
+              </FormControl>
+              
+              {prescription.followUpDate && (
+                <Chip 
+                  label={`Follow-up: ${new Date(prescription.followUpDate).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}`}
+                  color="primary"
+                  variant="outlined"
+                  onDelete={() => setPrescription(prev => ({
+                    ...prev,
+                    followUpWeeks: '',
+                    followUpDays: '',
+                    followUpDate: ''
+                  }))}
+                />
+              )}
+            </Box>
           </Grid>
         </Grid>
         

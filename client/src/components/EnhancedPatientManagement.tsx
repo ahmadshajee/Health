@@ -34,8 +34,12 @@ import {
   Assignment as AssignmentIcon,
   Warning as WarningIcon,
   Cake as CakeIcon,
-  Visibility as VisibilityIcon
+  Visibility as VisibilityIcon,
+  Today as TodayIcon,
+  Schedule as ScheduleIcon,
+  Notifications as NotificationsIcon
 } from '@mui/icons-material';
+import { prescriptionsAPI } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { Patient } from '../types/auth';
 import {
@@ -73,6 +77,18 @@ interface EnhancedPatient extends Omit<Patient, 'medicalHistory'> {
   insurance?: any;
 }
 
+interface FollowUpAppointment {
+  id: string;
+  patientId: string;
+  patientName: string;
+  patientEmail: string;
+  diagnosis: string;
+  followUpDate: string;
+  daysUntil: number;
+  isToday: boolean;
+  isUpcoming: boolean;
+}
+
 const EnhancedPatientManagement: React.FC = () => {
   const navigate = useNavigate();
   const [patients, setPatients] = useState<EnhancedPatient[]>([]);
@@ -83,6 +99,8 @@ const EnhancedPatientManagement: React.FC = () => {
   const [medicalDetails, setMedicalDetails] = useState<any>(null);
   const [medicalDetailsLoading, setMedicalDetailsLoading] = useState(false);
   const [editMedicalOpen, setEditMedicalOpen] = useState(false);
+  const [todayAppointments, setTodayAppointments] = useState<FollowUpAppointment[]>([]);
+  const [upcomingAppointments, setUpcomingAppointments] = useState<FollowUpAppointment[]>([]);
   const [medicalFormData, setMedicalFormData] = useState({
     allergies: [] as string[],
     medicalHistory: [] as string[],
@@ -91,10 +109,54 @@ const EnhancedPatientManagement: React.FC = () => {
     insurance: { provider: '', policyNumber: '', groupNumber: '' }
   });
 
-  // Fetch managed patients on component mount
+  // Fetch managed patients and appointments on component mount
   useEffect(() => {
     fetchManagedPatients();
+    fetchFollowUpAppointments();
   }, []);
+
+  const fetchFollowUpAppointments = async () => {
+    try {
+      const prescriptions = await prescriptionsAPI.getMyPrescriptions();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const appointmentsWithFollowUp: FollowUpAppointment[] = [];
+      
+      prescriptions.forEach((rx: any) => {
+        if (rx.followUpDate) {
+          const followUp = new Date(rx.followUpDate);
+          followUp.setHours(0, 0, 0, 0);
+          
+          const diffTime = followUp.getTime() - today.getTime();
+          const daysUntil = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          
+          // Include today and next 7 days
+          if (daysUntil >= 0 && daysUntil <= 7) {
+            appointmentsWithFollowUp.push({
+              id: rx.id || rx._id,
+              patientId: rx.patientId,
+              patientName: rx.patientName || 'Unknown Patient',
+              patientEmail: rx.patientEmail || '',
+              diagnosis: rx.diagnosis,
+              followUpDate: rx.followUpDate,
+              daysUntil,
+              isToday: daysUntil === 0,
+              isUpcoming: daysUntil > 0 && daysUntil <= 7
+            });
+          }
+        }
+      });
+      
+      // Sort by date
+      appointmentsWithFollowUp.sort((a, b) => a.daysUntil - b.daysUntil);
+      
+      setTodayAppointments(appointmentsWithFollowUp.filter(a => a.isToday));
+      setUpcomingAppointments(appointmentsWithFollowUp.filter(a => a.isUpcoming));
+    } catch (err) {
+      console.error('Error fetching follow-up appointments:', err);
+    }
+  };
 
   const fetchManagedPatients = async () => {
     try {
@@ -204,6 +266,121 @@ const EnhancedPatientManagement: React.FC = () => {
 
   return (
     <Box>
+      {/* Today's Appointments Alert */}
+      {todayAppointments.length > 0 && (
+        <Alert 
+          severity="warning" 
+          icon={<TodayIcon />}
+          sx={{ mb: 3 }}
+          action={
+            <Chip label={`${todayAppointments.length}`} color="warning" size="small" />
+          }
+        >
+          <Typography variant="subtitle2" fontWeight="bold">
+            Today's Follow-up Appointments
+          </Typography>
+        </Alert>
+      )}
+
+      {/* Today's Appointments Section */}
+      {todayAppointments.length > 0 && (
+        <Paper 
+          elevation={3} 
+          sx={{ 
+            p: 3, 
+            mb: 4, 
+            background: 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)',
+            border: '2px solid #ff9800'
+          }}
+        >
+          <Box display="flex" alignItems="center" gap={1} mb={2}>
+            <TodayIcon color="warning" fontSize="large" />
+            <Typography variant="h5" color="warning.dark" fontWeight="bold">
+              Today's Appointments ({todayAppointments.length})
+            </Typography>
+          </Box>
+          <Grid container spacing={2}>
+            {todayAppointments.map((apt) => (
+              <Grid item xs={12} sm={6} md={4} key={apt.id}>
+                <Card sx={{ bgcolor: 'white', boxShadow: 2 }}>
+                  <CardContent>
+                    <Box display="flex" alignItems="center" gap={1} mb={1}>
+                      <Avatar sx={{ bgcolor: 'warning.main', width: 32, height: 32 }}>
+                        <PersonIcon fontSize="small" />
+                      </Avatar>
+                      <Typography variant="subtitle1" fontWeight="bold">
+                        {apt.patientName}
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      {apt.patientEmail}
+                    </Typography>
+                    <Chip 
+                      label={apt.diagnosis} 
+                      size="small" 
+                      color="primary" 
+                      variant="outlined"
+                      sx={{ mt: 1 }}
+                    />
+                    <Box display="flex" alignItems="center" gap={1} mt={1}>
+                      <ScheduleIcon fontSize="small" color="warning" />
+                      <Typography variant="caption" color="warning.dark" fontWeight="bold">
+                        Follow-up TODAY
+                      </Typography>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Paper>
+      )}
+
+      {/* Upcoming Appointments Section (Next 7 Days) */}
+      {upcomingAppointments.length > 0 && (
+        <Paper 
+          elevation={2} 
+          sx={{ 
+            p: 3, 
+            mb: 4, 
+            background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
+            border: '1px solid #2196f3'
+          }}
+        >
+          <Box display="flex" alignItems="center" gap={1} mb={2}>
+            <NotificationsIcon color="info" fontSize="large" />
+            <Typography variant="h6" color="info.dark" fontWeight="bold">
+              Upcoming Appointments - Next 7 Days ({upcomingAppointments.length})
+            </Typography>
+          </Box>
+          <Grid container spacing={2}>
+            {upcomingAppointments.map((apt) => (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={apt.id}>
+                <Card sx={{ bgcolor: 'white', boxShadow: 1 }}>
+                  <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
+                    <Typography variant="subtitle2" fontWeight="bold" noWrap>
+                      {apt.patientName}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" display="block" noWrap>
+                      {apt.diagnosis}
+                    </Typography>
+                    <Box display="flex" alignItems="center" gap={0.5} mt={0.5}>
+                      <ScheduleIcon fontSize="small" color="info" />
+                      <Typography variant="caption" color="info.dark" fontWeight="bold">
+                        {apt.daysUntil === 1 ? 'Tomorrow' : `In ${apt.daysUntil} days`}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
+                        {formatDate(apt.followUpDate)}
+                      </Typography>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Paper>
+      )}
+
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
         <Box>
           <Typography variant="h4" component="h1" gutterBottom>
