@@ -24,7 +24,11 @@ import {
   FormGroup,
   Tooltip,
   Tabs,
-  Tab
+  Tab,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Chip
 } from '@mui/material';
 import { 
   Add as AddIcon, 
@@ -38,7 +42,10 @@ import {
   WbSunny as MorningIcon,
   LightMode as AfternoonIcon,
   WbTwilight as EveningIcon,
-  NightsStay as NightIcon
+  NightsStay as NightIcon,
+  ExpandMore as ExpandMoreIcon,
+  History as HistoryIcon,
+  Science as ScienceIcon
 } from '@mui/icons-material';
 import { Html5Qrcode } from 'html5-qrcode';
 import { usersAPI, prescriptionsAPI } from '../../services/api';
@@ -445,6 +452,18 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
   const [medicationSuggestions, setMedicationSuggestions] = useState({});
   const [loadingMedications, setLoadingMedications] = useState({});
   
+  // Patient's old prescriptions
+  const [patientPrescriptions, setPatientPrescriptions] = useState([]);
+  const [loadingPatientPrescriptions, setLoadingPatientPrescriptions] = useState(false);
+  
+  // Available tests
+  const availableTests = [
+    'X-Ray', 'MRI', 'CT Scan', 'Blood Test', 'Urine Test', 
+    'ECG', 'EEG', 'Ultrasound', 'Thyroid Profile', 'Lipid Profile',
+    'Liver Function Test', 'Kidney Function Test', 'HbA1c', 
+    'Vitamin D', 'Vitamin B12', 'CBC', 'ESR', 'CRP'
+  ];
+  
   const [prescription, setPrescription] = useState({
     patientId: '',
     patientEmail: '',
@@ -452,6 +471,7 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
     medications: [
       { name: '', dosage: '', frequency: '', timing: '', durationWeeks: '', durationDays: '' }
     ],
+    testsRequired: [],
     instructions: '',
     followUpDate: ''
   });
@@ -511,6 +531,43 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
       setLoadingPatients(false);
     }
   };
+
+  // Fetch patient's old prescriptions when patient is selected
+  const fetchPatientPrescriptions = async (patientId) => {
+    if (!patientId) {
+      setPatientPrescriptions([]);
+      return;
+    }
+    
+    try {
+      setLoadingPatientPrescriptions(true);
+      console.log('Fetching prescriptions for patient:', patientId);
+      const response = await prescriptionsAPI.getAll();
+      
+      // Filter prescriptions for this specific patient
+      const patientRx = response.prescriptions.filter(rx => rx.patientId === patientId);
+      
+      // Sort by date (newest first)
+      patientRx.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
+      console.log('Found', patientRx.length, 'prescriptions for patient');
+      setPatientPrescriptions(patientRx);
+    } catch (error) {
+      console.error('Failed to fetch patient prescriptions:', error);
+      setPatientPrescriptions([]);
+    } finally {
+      setLoadingPatientPrescriptions(false);
+    }
+  };
+
+  // Effect to fetch prescriptions when patient changes
+  useEffect(() => {
+    if (prescription.patientId) {
+      fetchPatientPrescriptions(prescription.patientId);
+    } else {
+      setPatientPrescriptions([]);
+    }
+  }, [prescription.patientId]);
 
   // Handle Add Existing Patient dialog
   const handleOpenAddExistingPatientDialog = () => {
@@ -860,6 +917,7 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
         medications: [
           { name: '', dosage: '', frequency: '', timing: '', durationWeeks: '', durationDays: '' }
         ],
+        testsRequired: [],
         instructions: '',
         followUpDate: ''
       });
@@ -960,6 +1018,128 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
               </Box>
             </Box>
           </Grid>
+          
+          {/* Old Prescriptions Section - shows when patient is selected */}
+          {prescription.patientId && (
+            <Grid item xs={12}>
+              <Paper 
+                elevation={0} 
+                sx={{ 
+                  p: 2, 
+                  backgroundColor: 'rgba(25, 118, 210, 0.04)', 
+                  border: '1px solid rgba(25, 118, 210, 0.2)',
+                  borderRadius: 2
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <HistoryIcon color="primary" />
+                  <Typography variant="h6" color="primary">
+                    Previous Prescriptions
+                  </Typography>
+                  {loadingPatientPrescriptions && <CircularProgress size={20} />}
+                </Box>
+                
+                {patientPrescriptions.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                    {loadingPatientPrescriptions ? 'Loading prescriptions...' : 'No previous prescriptions for this patient'}
+                  </Typography>
+                ) : (
+                  <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
+                    {patientPrescriptions.map((rx, index) => (
+                      <Accordion 
+                        key={rx._id || rx.id || index}
+                        sx={{ 
+                          mb: 1, 
+                          '&:before': { display: 'none' },
+                          boxShadow: 1
+                        }}
+                      >
+                        <AccordionSummary
+                          expandIcon={<ExpandMoreIcon />}
+                          sx={{ backgroundColor: 'rgba(0, 0, 0, 0.02)' }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                            <Typography variant="subtitle1" fontWeight="bold">
+                              {new Date(rx.createdAt).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })}
+                            </Typography>
+                            <Chip 
+                              label={rx.diagnosis?.substring(0, 30) + (rx.diagnosis?.length > 30 ? '...' : '')} 
+                              size="small" 
+                              color="primary"
+                              variant="outlined"
+                            />
+                          </Box>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                          <Box>
+                            <Typography variant="subtitle2" color="primary" gutterBottom>
+                              Diagnosis:
+                            </Typography>
+                            <Typography variant="body2" paragraph>
+                              {rx.diagnosis}
+                            </Typography>
+                            
+                            <Typography variant="subtitle2" color="primary" gutterBottom>
+                              Medications:
+                            </Typography>
+                            {rx.medications?.map((med, medIndex) => (
+                              <Box key={medIndex} sx={{ ml: 2, mb: 1 }}>
+                                <Typography variant="body2">
+                                  <strong>{med.name}</strong> - {med.dosage}
+                                  {med.frequency && `, ${med.frequency}`}
+                                  {med.timing && ` (${med.timing})`}
+                                  {(med.durationWeeks || med.durationDays) && (
+                                    <span>
+                                      {' '}for {med.durationWeeks && `${med.durationWeeks} week(s)`}
+                                      {med.durationDays && ` ${med.durationDays} day(s)`}
+                                    </span>
+                                  )}
+                                </Typography>
+                              </Box>
+                            ))}
+                            
+                            {rx.testsRequired && rx.testsRequired.length > 0 && (
+                              <>
+                                <Typography variant="subtitle2" color="primary" gutterBottom sx={{ mt: 1 }}>
+                                  Tests Required:
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, ml: 2 }}>
+                                  {rx.testsRequired.map((test, testIndex) => (
+                                    <Chip key={testIndex} label={test} size="small" color="secondary" variant="outlined" />
+                                  ))}
+                                </Box>
+                              </>
+                            )}
+                            
+                            {rx.instructions && (
+                              <>
+                                <Typography variant="subtitle2" color="primary" gutterBottom sx={{ mt: 1 }}>
+                                  Instructions:
+                                </Typography>
+                                <Typography variant="body2" sx={{ ml: 2 }}>
+                                  {rx.instructions}
+                                </Typography>
+                              </>
+                            )}
+                            
+                            {rx.followUpDate && (
+                              <Typography variant="body2" sx={{ mt: 1 }}>
+                                <strong>Follow-up:</strong> {new Date(rx.followUpDate).toLocaleDateString()}
+                              </Typography>
+                            )}
+                          </Box>
+                        </AccordionDetails>
+                      </Accordion>
+                    ))}
+                  </Box>
+                )}
+              </Paper>
+            </Grid>
+          )}
           
           <Grid item xs={12}>
             <TextField
@@ -1157,6 +1337,80 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
             >
               Add Medication
             </Button>
+          </Grid>
+          
+          {/* Tests Required Section */}
+          <Grid item xs={12}>
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                p: 2, 
+                backgroundColor: 'rgba(156, 39, 176, 0.04)', 
+                border: '1px solid rgba(156, 39, 176, 0.2)',
+                borderRadius: 2
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <ScienceIcon color="secondary" />
+                <Typography variant="h6" color="secondary">
+                  Tests Required
+                </Typography>
+              </Box>
+              
+              <FormGroup row sx={{ gap: 1 }}>
+                {availableTests.map((test) => (
+                  <FormControlLabel
+                    key={test}
+                    control={
+                      <Checkbox
+                        checked={prescription.testsRequired.includes(test)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setPrescription(prev => ({
+                              ...prev,
+                              testsRequired: [...prev.testsRequired, test]
+                            }));
+                          } else {
+                            setPrescription(prev => ({
+                              ...prev,
+                              testsRequired: prev.testsRequired.filter(t => t !== test)
+                            }));
+                          }
+                        }}
+                        size="small"
+                      />
+                    }
+                    label={test}
+                    sx={{ 
+                      minWidth: 140,
+                      '& .MuiFormControlLabel-label': { fontSize: '0.9rem' }
+                    }}
+                  />
+                ))}
+              </FormGroup>
+              
+              {prescription.testsRequired.length > 0 && (
+                <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center', mr: 1 }}>
+                    Selected:
+                  </Typography>
+                  {prescription.testsRequired.map((test, index) => (
+                    <Chip 
+                      key={index}
+                      label={test}
+                      onDelete={() => {
+                        setPrescription(prev => ({
+                          ...prev,
+                          testsRequired: prev.testsRequired.filter(t => t !== test)
+                        }));
+                      }}
+                      color="secondary"
+                      size="small"
+                    />
+                  ))}
+                </Box>
+              )}
+            </Paper>
           </Grid>
           
           <Grid item xs={12}>

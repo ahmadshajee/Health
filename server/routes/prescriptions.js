@@ -156,6 +156,7 @@ router.post('/', doctor, async (req, res) => {
       patientEmail, 
       diagnosis,
       medications,
+      testsRequired,
       instructions,
       followUpDate
     } = req.body;
@@ -203,6 +204,7 @@ router.post('/', doctor, async (req, res) => {
   patientEmail: patient.email,
       diagnosis,
       medications,
+      testsRequired: testsRequired || [],
       instructions,
       followUpDate
     });
@@ -562,6 +564,19 @@ router.get('/:id/download', auth, async (req, res) => {
           doc.text(`* ${inv}`, 50, yPos);
           yPos += 11;
         }
+      });
+      yPos += 8;
+    }
+    
+    // ============ TESTS REQUIRED ============
+    if (prescription.testsRequired && prescription.testsRequired.length > 0) {
+      doc.fillColor(textColor).fontSize(10).font('Helvetica-Bold')
+         .text('Tests Required:', 40, yPos);
+      yPos += 12;
+      doc.font('Helvetica').fontSize(10);
+      prescription.testsRequired.forEach(test => {
+        doc.text(`* ${test}`, 50, yPos);
+        yPos += 11;
       });
       yPos += 8;
     }

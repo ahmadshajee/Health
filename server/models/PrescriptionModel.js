@@ -25,6 +25,10 @@ const prescriptionSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.Mixed,
     default: []
   },
+  testsRequired: {
+    type: [String],
+    default: []
+  },
   dosage: {
     type: String,
     default: ''
