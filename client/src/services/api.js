@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-// Server URLs - Primary (IIS) and Backup (Render)
-const PRIMARY_SERVER = 'http://122.166.193.245:5000/api';  // Your IIS Server
+// Server URLs - Primary (IIS with HTTPS) and Backup (Render)
+const PRIMARY_SERVER = 'https://122.166.193.245:5000/api';  // Your IIS Server (HTTPS)
 const BACKUP_SERVER = 'https://health-8zum.onrender.com/api';  // Render Backup
-const LOCAL_SERVER = 'http://localhost:5000/api';  // Local development
+const LOCAL_SERVER = 'https://localhost:5000/api';  // Local development (HTTPS)
 
 // Cache for active server URL
 let activeServerUrl = null;
@@ -53,7 +53,7 @@ const getActiveServer = async () => {
     }
     
     // In production, try primary (IIS) server first
-    console.log('Checking primary server (IIS)...');
+    console.log('Checking primary server (IIS HTTPS)...');
     if (await checkServerHealth(PRIMARY_SERVER)) {
       activeServerUrl = PRIMARY_SERVER;
       lastServerCheck = now;
@@ -62,7 +62,7 @@ const getActiveServer = async () => {
     }
     
     // Fallback to backup (Render) server
-    console.log('Primary server unavailable, checking backup server (Render)...');
+    console.log('IIS unavailable, checking backup server (Render)...');
     if (await checkServerHealth(BACKUP_SERVER)) {
       activeServerUrl = BACKUP_SERVER;
       lastServerCheck = now;
@@ -70,9 +70,9 @@ const getActiveServer = async () => {
       return activeServerUrl;
     }
     
-    // If both fail, default to backup (Render might be cold starting)
-    console.log('Both servers unreachable, defaulting to backup server');
-    activeServerUrl = BACKUP_SERVER;
+    // If both fail, default to IIS (might be temporarily unavailable)
+    console.log('Both servers unreachable, defaulting to IIS server');
+    activeServerUrl = PRIMARY_SERVER;
     lastServerCheck = now;
     return activeServerUrl;
   } finally {
