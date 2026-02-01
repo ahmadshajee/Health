@@ -1,9 +1,11 @@
 import axios from 'axios';
 
-// Server URLs - Primary (IIS with HTTPS) and Backup (Render)
-const PRIMARY_SERVER = 'https://122.166.193.245:5000/api';  // Your IIS Server (HTTPS)
-const BACKUP_SERVER = 'https://health-8zum.onrender.com/api';  // Render Backup
-const LOCAL_SERVER = 'https://localhost:5000/api';  // Local development (HTTPS)
+// Server URLs
+// Note: IIS with self-signed cert doesn't work from HTTPS sites (browsers block it)
+// Using Render as primary until proper SSL is configured for IIS
+const PRIMARY_SERVER = 'https://health-8zum.onrender.com/api';  // Render (has valid HTTPS)
+const IIS_SERVER = 'https://122.166.193.245:5000/api';  // IIS (self-signed cert - won't work externally)
+const LOCAL_SERVER = 'http://localhost:5000/api';  // Local development
 
 // Cache for active server URL
 let activeServerUrl = null;
@@ -52,26 +54,17 @@ const getActiveServer = async () => {
       return activeServerUrl;
     }
     
-    // In production, try primary (IIS) server first
-    console.log('Checking primary server (IIS HTTPS)...');
+    // In production, use Render (has valid HTTPS certificate)
+    console.log('Checking primary server (Render)...');
     if (await checkServerHealth(PRIMARY_SERVER)) {
       activeServerUrl = PRIMARY_SERVER;
       lastServerCheck = now;
-      console.log('✅ Using PRIMARY server (IIS):', PRIMARY_SERVER);
+      console.log('✅ Using PRIMARY server (Render):', PRIMARY_SERVER);
       return activeServerUrl;
     }
     
-    // Fallback to backup (Render) server
-    console.log('IIS unavailable, checking backup server (Render)...');
-    if (await checkServerHealth(BACKUP_SERVER)) {
-      activeServerUrl = BACKUP_SERVER;
-      lastServerCheck = now;
-      console.log('⚠️ Using BACKUP server (Render):', BACKUP_SERVER);
-      return activeServerUrl;
-    }
-    
-    // If both fail, default to IIS (might be temporarily unavailable)
-    console.log('Both servers unreachable, defaulting to IIS server');
+    // If Render fails, default to it anyway (might be cold starting)
+    console.log('Server unreachable, defaulting to Render (may be cold starting)');
     activeServerUrl = PRIMARY_SERVER;
     lastServerCheck = now;
     return activeServerUrl;
@@ -143,7 +136,7 @@ api.interceptors.response.use(
 export const getServerStatus = () => ({
   activeServer: activeServerUrl,
   isPrimary: activeServerUrl === PRIMARY_SERVER,
-  isBackup: activeServerUrl === BACKUP_SERVER,
+  isIIS: activeServerUrl === IIS_SERVER,
   lastCheck: new Date(lastServerCheck).toISOString()
 });
 
