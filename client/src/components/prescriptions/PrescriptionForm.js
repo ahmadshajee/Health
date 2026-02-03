@@ -825,14 +825,24 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
       const response = await usersAPI.createPatient(newPatientData);
       console.log('New patient created:', response);
 
-      // Refresh patients list
-      await fetchPatients();
+      const newPatient = response.patient;
+
+      // Directly add the new patient to the patients list so they appear immediately
+      // (fetchPatients only returns patients the doctor has prescribed to before)
+      setPatientsList(prev => {
+        // Check if patient is already in the list to avoid duplicates
+        const exists = prev.some(p => p.id === newPatient.id || p._id === newPatient.id);
+        if (exists) {
+          return prev;
+        }
+        return [...prev, newPatient];
+      });
 
       // Auto-select the new patient
       setPrescription({
         ...prescription,
-        patientId: response.patient.id,
-        patientEmail: response.patient.email
+        patientId: newPatient.id || newPatient._id,
+        patientEmail: newPatient.email
       });
 
       // Close dialog and show success
@@ -841,7 +851,7 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
       setError('');
       
       // Show a temporary success message
-      alert(`Patient "${response.patient.firstName} ${response.patient.lastName}" created successfully!\n\nDefault password: password123\n\nPlease inform the patient to change their password after first login.`);
+      alert(`Patient "${newPatient.firstName} ${newPatient.lastName}" created successfully!\n\nDefault password: password123\n\nPlease inform the patient to change their password after first login.`);
     } catch (error) {
       console.error('Failed to create patient:', error);
       setNewPatientError(error.message || 'Failed to create patient');
