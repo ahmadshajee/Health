@@ -95,7 +95,11 @@ const userSchema = new mongoose.Schema({
     default: ''
   },
   allergies: {
-    type: [String],
+    type: mongoose.Schema.Types.Mixed,
+    default: { environmental: [], food: [], drugs: [], other: [] }
+  },
+  diseaseHistory: {
+    type: [mongoose.Schema.Types.Mixed],
     default: []
   },
   chronicConditions: {

@@ -420,7 +420,8 @@ router.put('/profile', auth, async (req, res) => {
       allergies, 
       chronicConditions, 
       emergencyContact, 
-      gender 
+      gender,
+      diseaseHistory
     } = req.body;
     
     const updateData = {
@@ -434,7 +435,7 @@ router.put('/profile', auth, async (req, res) => {
         experience,
         qualifications
       }),
-      ...(req.user.role === 'patient' && { dateOfBirth, address, phone, bloodType, allergies, chronicConditions, emergencyContact, gender })
+      ...(req.user.role === 'patient' && { dateOfBirth, address, phone, bloodType, allergies, chronicConditions, emergencyContact, gender, diseaseHistory })
     };
 
     // Remove undefined values
