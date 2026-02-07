@@ -825,24 +825,23 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
       const response = await usersAPI.createPatient(newPatientData);
       console.log('New patient created:', response);
 
-      const newPatient = response.patient;
+      const createdPatient = response.patient;
+      const createdPatientId = createdPatient.id || createdPatient._id;
 
-      // Directly add the new patient to the patients list so they appear immediately
-      // (fetchPatients only returns patients the doctor has prescribed to before)
+      // Refresh patients list from server (patient is now auto-linked on the server)
+      await fetchPatients();
+
+      // Ensure the patient is in the local list (fallback in case server hasn't synced yet)
       setPatientsList(prev => {
-        // Check if patient is already in the list to avoid duplicates
-        const exists = prev.some(p => p.id === newPatient.id || p._id === newPatient.id);
-        if (exists) {
-          return prev;
-        }
-        return [...prev, newPatient];
+        const alreadyExists = prev.some(p => (p.id === createdPatientId) || (p._id === createdPatientId));
+        return alreadyExists ? prev : [...prev, createdPatient];
       });
 
       // Auto-select the new patient
       setPrescription({
         ...prescription,
-        patientId: newPatient.id || newPatient._id,
-        patientEmail: newPatient.email
+        patientId: createdPatientId,
+        patientEmail: createdPatient.email
       });
 
       // Close dialog and show success
@@ -851,7 +850,7 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
       setError('');
       
       // Show a temporary success message
-      alert(`Patient "${newPatient.firstName} ${newPatient.lastName}" created successfully!\n\nDefault password: password123\n\nPlease inform the patient to change their password after first login.`);
+      alert(`Patient "${createdPatient.firstName} ${createdPatient.lastName}" created successfully!\n\nDefault password: password123\n\nPlease inform the patient to change their password after first login.`);
     } catch (error) {
       console.error('Failed to create patient:', error);
       setNewPatientError(error.message || 'Failed to create patient');
@@ -980,7 +979,7 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
                 sx={{ flexGrow: 1, minWidth: 250 }}
                 options={patientsList}
                 getOptionLabel={(option) => 
-                  option ? `${option.firstName} ${option.lastName} (${option.email})` : ''
+                  option ? `${option.firstName} ${option.lastName}` : ''
                 }
                 value={patientsList.find(p => (p.id === prescription.patientId) || (p._id === prescription.patientId)) || null}
                 onChange={(event, newValue) => {
@@ -992,23 +991,33 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
                 }}
                 isOptionEqualToValue={(option, value) => (option.id === value?.id) || (option._id === value?._id)}
                 noOptionsText={patientsList.length === 0 ? "No patients yet - Add a new or existing patient" : "No matching patients"}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Select Patient"
-                    required
-                    placeholder="Type to search your patients..."
-                    helperText="Only showing patients you have prescribed to before"
-                  />
-                )}
+                renderInput={(params) => {
+                  const selectedPatient = patientsList.find(p => (p.id === prescription.patientId) || (p._id === prescription.patientId));
+                  // When a patient is selected, show name + email in the input
+                  if (selectedPatient && params.inputProps.value === `${selectedPatient.firstName} ${selectedPatient.lastName}`) {
+                    params = {
+                      ...params,
+                      inputProps: {
+                        ...params.inputProps,
+                        value: `${selectedPatient.firstName} ${selectedPatient.lastName} (${selectedPatient.email})`
+                      }
+                    };
+                  }
+                  return (
+                    <TextField
+                      {...params}
+                      label="Select Patient"
+                      required
+                      placeholder="Type to search your patients..."
+                      helperText="Only showing patients you have prescribed to before"
+                    />
+                  );
+                }}
                 renderOption={(props, option) => (
                   <li {...props} key={option.id || option._id}>
                     <Box>
                       <Typography variant="body1">
                         {option.firstName} {option.lastName}
-                      </Typography>
-                      <Typography variant="caption" color="textSecondary">
-                        {option.email}
                       </Typography>
                     </Box>
                   </li>

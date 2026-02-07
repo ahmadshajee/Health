@@ -137,6 +137,20 @@ router.post('/patients/create', doctor, async (req, res) => {
 
     console.log('New patient created by doctor:', newPatient.id);
 
+    // Auto-link the new patient to this doctor so they appear in getMyPatients
+    try {
+      const doctorData = await findUserById(req.user.id);
+      const linkedPatients = doctorData?.linkedPatients || [];
+      if (!linkedPatients.includes(newPatient.id)) {
+        linkedPatients.push(newPatient.id);
+        await updateUser(req.user.id, { linkedPatients });
+        console.log('Auto-linked new patient to doctor:', newPatient.id, '->', req.user.id);
+      }
+    } catch (linkError) {
+      console.error('Failed to auto-link patient to doctor:', linkError);
+      // Don't fail the whole request, patient was still created
+    }
+
     res.status(201).json({
       message: 'Patient account created successfully. Default password is: password123',
       patient: newPatient
