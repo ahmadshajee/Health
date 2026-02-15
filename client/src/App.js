@@ -1194,9 +1194,9 @@ const AppContent = () => {
             )}
             
             {activeContent === 'managePatients' && user?.role === 'doctor' && (
-              <Paper elevation={3} sx={{ p: 3 }}>
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-                  <Typography variant="h5">
+              <Paper elevation={3} sx={{ p: { xs: 1.5, sm: 3 } }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexWrap="wrap" gap={1}>
+                  <Typography variant="h5" sx={{ fontSize: { xs: '1.15rem', sm: '1.5rem' } }}>
                     Patient Management - Prescriptions Overview
                   </Typography>
                   <IconButton onClick={fetchPrescriptions} disabled={prescriptionsLoading}>
@@ -1265,14 +1265,14 @@ const AppContent = () => {
                                     <TableRow sx={{ bgcolor: 'warning.light' }}>
                                       <TableCell><strong>Patient</strong></TableCell>
                                       <TableCell><strong>Diagnosis</strong></TableCell>
-                                      <TableCell><strong>Original Date</strong></TableCell>
+                                      {!isMobile && <TableCell><strong>Original Date</strong></TableCell>}
                                       <TableCell><strong>Follow-up</strong></TableCell>
-                                      <TableCell align="center"><strong>Actions</strong></TableCell>
+                                      {!isMobile && <TableCell align="center"><strong>Actions</strong></TableCell>}
                                     </TableRow>
                                   </TableHead>
                                   <TableBody>
                                     {todayAppointments.map((prescription) => (
-                                      <TableRow key={prescription.id} hover sx={{ bgcolor: 'rgba(255, 152, 0, 0.1)' }}>
+                                      <TableRow key={prescription.id} hover sx={{ bgcolor: 'rgba(255, 152, 0, 0.1)', cursor: isMobile ? 'pointer' : 'default' }} onClick={() => isMobile && handleViewPrescription(prescription)}>
                                         <TableCell>
                                           <Box display="flex" alignItems="center">
                                             <PersonIcon fontSize="small" sx={{ mr: 1, color: 'warning.main' }} />
@@ -1280,10 +1280,11 @@ const AppContent = () => {
                                           </Box>
                                         </TableCell>
                                         <TableCell>{prescription.diagnosis}</TableCell>
-                                        <TableCell>{new Date(prescription.createdAt).toLocaleDateString()}</TableCell>
+                                        {!isMobile && <TableCell>{new Date(prescription.createdAt).toLocaleDateString()}</TableCell>}
                                         <TableCell>
                                           <Chip label="TODAY" color="warning" size="small" sx={{ fontWeight: 'bold' }} />
                                         </TableCell>
+                                        {!isMobile && (
                                         <TableCell align="center">
                                           <Button
                                             size="small"
@@ -1295,6 +1296,7 @@ const AppContent = () => {
                                             View
                                           </Button>
                                         </TableCell>
+                                        )}
                                       </TableRow>
                                     ))}
                                   </TableBody>
@@ -1325,7 +1327,7 @@ const AppContent = () => {
                                       <TableCell><strong>Patient</strong></TableCell>
                                       <TableCell><strong>Diagnosis</strong></TableCell>
                                       <TableCell><strong>Follow-up Date</strong></TableCell>
-                                      <TableCell><strong>Days Until</strong></TableCell>
+                                      {!isMobile && <TableCell><strong>Days Until</strong></TableCell>}
                                     </TableRow>
                                   </TableHead>
                                   <TableBody>
@@ -1351,6 +1353,7 @@ const AppContent = () => {
                                                 day: 'numeric'
                                               })}
                                             </TableCell>
+                                            {!isMobile && (
                                             <TableCell>
                                               <Chip 
                                                 label={daysUntil === 1 ? 'Tomorrow' : `In ${daysUntil} days`} 
@@ -1359,6 +1362,7 @@ const AppContent = () => {
                                                 variant="outlined"
                                               />
                                             </TableCell>
+                                            )}
                                           </TableRow>
                                         );
                                       })}
@@ -1376,14 +1380,14 @@ const AppContent = () => {
                       <CheckCircleIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
                       Active Prescriptions ({prescriptions.filter(p => p.status === 'active').length})
                     </Typography>
-                    <TableContainer component={Paper} variant="outlined" sx={{ mb: 4 }}>
+                    <TableContainer component={Paper} variant="outlined" sx={{ mb: 4, overflowX: 'auto' }}>
                       <Table size="small">
                         <TableHead>
                           <TableRow sx={{ bgcolor: 'success.light' }}>
                             <TableCell><strong>Patient</strong></TableCell>
                             <TableCell><strong>Diagnosis</strong></TableCell>
-                            <TableCell><strong>Date</strong></TableCell>
-                            <TableCell><strong>Status</strong></TableCell>
+                            {!isMobile && <TableCell><strong>Date</strong></TableCell>}
+                            {!isMobile && <TableCell><strong>Status</strong></TableCell>}
                             <TableCell align="center"><strong>Actions</strong></TableCell>
                           </TableRow>
                         </TableHead>
@@ -1404,18 +1408,20 @@ const AppContent = () => {
                                   </Box>
                                 </TableCell>
                                 <TableCell>{prescription.diagnosis}</TableCell>
-                                <TableCell>{new Date(prescription.createdAt).toLocaleDateString()}</TableCell>
+                                {!isMobile && <TableCell>{new Date(prescription.createdAt).toLocaleDateString()}</TableCell>}
+                                {!isMobile && (
                                 <TableCell>
                                   <Chip label="Active" color="success" size="small" />
                                 </TableCell>
+                                )}
                                 <TableCell align="center">
+                                  <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 0.5, justifyContent: 'center' }}>
                                   <Button
                                     size="small"
                                     variant="contained"
                                     color="primary"
                                     startIcon={<VisibilityIcon />}
                                     onClick={() => handleViewPrescription(prescription)}
-                                    sx={{ mr: 1 }}
                                   >
                                     View
                                   </Button>
@@ -1423,21 +1429,20 @@ const AppContent = () => {
                                     size="small"
                                     variant="outlined"
                                     color="warning"
-                                    startIcon={<CancelIcon />}
+                                    startIcon={!isMobile ? <CancelIcon /> : undefined}
                                     onClick={() => setConfirmDialog({ 
                                       open: true, 
                                       prescriptionId: prescription.id, 
                                       action: 'terminate' 
                                     })}
-                                    sx={{ mr: 1 }}
                                   >
-                                    Terminate
+                                    {isMobile ? 'End' : 'Terminate'}
                                   </Button>
                                   <Button
                                     size="small"
                                     variant="outlined"
                                     color="error"
-                                    startIcon={<DeleteIcon />}
+                                    startIcon={!isMobile ? <DeleteIcon /> : undefined}
                                     onClick={() => setConfirmDialog({ 
                                       open: true, 
                                       prescriptionId: prescription.id, 
@@ -1446,6 +1451,7 @@ const AppContent = () => {
                                   >
                                     Delete
                                   </Button>
+                                  </Box>
                                 </TableCell>
                               </TableRow>
                             ))
@@ -1459,14 +1465,14 @@ const AppContent = () => {
                       <CancelIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
                       Completed/Terminated Prescriptions ({prescriptions.filter(p => p.status !== 'active').length})
                     </Typography>
-                    <TableContainer component={Paper} variant="outlined">
+                    <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
                       <Table size="small">
                         <TableHead>
                           <TableRow sx={{ bgcolor: 'grey.200' }}>
                             <TableCell><strong>Patient</strong></TableCell>
                             <TableCell><strong>Diagnosis</strong></TableCell>
-                            <TableCell><strong>Date</strong></TableCell>
-                            <TableCell><strong>Status</strong></TableCell>
+                            {!isMobile && <TableCell><strong>Date</strong></TableCell>}
+                            {!isMobile && <TableCell><strong>Status</strong></TableCell>}
                             <TableCell align="center"><strong>Actions</strong></TableCell>
                           </TableRow>
                         </TableHead>
@@ -1487,18 +1493,20 @@ const AppContent = () => {
                                   </Box>
                                 </TableCell>
                                 <TableCell>{prescription.diagnosis}</TableCell>
-                                <TableCell>{new Date(prescription.createdAt).toLocaleDateString()}</TableCell>
+                                {!isMobile && <TableCell>{new Date(prescription.createdAt).toLocaleDateString()}</TableCell>}
+                                {!isMobile && (
                                 <TableCell>
                                   <Chip label="Completed" color="default" size="small" />
                                 </TableCell>
+                                )}
                                 <TableCell align="center">
+                                  <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 0.5, justifyContent: 'center' }}>
                                   <Button
                                     size="small"
                                     variant="contained"
                                     color="primary"
                                     startIcon={<VisibilityIcon />}
                                     onClick={() => handleViewPrescription(prescription)}
-                                    sx={{ mr: 1 }}
                                   >
                                     View
                                   </Button>
@@ -1506,21 +1514,20 @@ const AppContent = () => {
                                     size="small"
                                     variant="outlined"
                                     color="success"
-                                    startIcon={<CheckCircleIcon />}
+                                    startIcon={!isMobile ? <CheckCircleIcon /> : undefined}
                                     onClick={() => setConfirmDialog({ 
                                       open: true, 
                                       prescriptionId: prescription.id, 
                                       action: 'activate' 
                                     })}
-                                    sx={{ mr: 1 }}
                                   >
-                                    Reactivate
+                                    {isMobile ? 'Reactivate' : 'Reactivate'}
                                   </Button>
                                   <Button
                                     size="small"
                                     variant="outlined"
                                     color="error"
-                                    startIcon={<DeleteIcon />}
+                                    startIcon={!isMobile ? <DeleteIcon /> : undefined}
                                     onClick={() => setConfirmDialog({ 
                                       open: true, 
                                       prescriptionId: prescription.id, 
@@ -1529,6 +1536,7 @@ const AppContent = () => {
                                   >
                                     Delete
                                   </Button>
+                                  </Box>
                                 </TableCell>
                               </TableRow>
                             ))
