@@ -696,6 +696,9 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
       setLoading(false);
       setSuccess(true);
       
+      // Scroll to top so user sees the success banner
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      
       if (onCreatePrescription) {
         onCreatePrescription(response.prescription);
       }
@@ -762,8 +765,23 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
       )}
       
       {success && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          Prescription created successfully! A QR code and email have been sent to the patient.
+        <Alert 
+          severity="success" 
+          variant="filled"
+          sx={{ 
+            mb: 3, 
+            fontSize: '1.1rem', 
+            fontWeight: 'bold',
+            '& .MuiAlert-icon': { fontSize: '1.5rem' },
+            animation: 'fadeIn 0.5s ease-in',
+            '@keyframes fadeIn': {
+              from: { opacity: 0, transform: 'translateY(-10px)' },
+              to: { opacity: 1, transform: 'translateY(0)' }
+            }
+          }}
+          onClose={() => setSuccess(false)}
+        >
+          Prescription created successfully!
         </Alert>
       )}
       
