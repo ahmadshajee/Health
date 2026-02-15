@@ -1409,21 +1409,33 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
           
           {/* Tests Required Section */}
           <Grid item xs={12}>
-            <Paper 
-              elevation={0} 
+            <Accordion 
+              defaultExpanded={false}
               sx={{ 
-                p: 2, 
                 backgroundColor: 'rgba(156, 39, 176, 0.04)', 
                 border: '1px solid rgba(156, 39, 176, 0.2)',
-                borderRadius: 2
+                borderRadius: '8px !important',
+                '&:before': { display: 'none' },
+                boxShadow: 'none'
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <ScienceIcon color="secondary" />
-                <Typography variant="h6" color="secondary">
-                  Tests Required
-                </Typography>
-              </Box>
+              <AccordionSummary expandIcon={<ExpandMoreIcon color="secondary" />}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <ScienceIcon color="secondary" />
+                  <Typography variant="h6" color="secondary">
+                    Tests Required
+                  </Typography>
+                  {prescription.testsRequired.length > 0 && (
+                    <Chip 
+                      label={prescription.testsRequired.length} 
+                      color="secondary" 
+                      size="small" 
+                      sx={{ ml: 1 }}
+                    />
+                  )}
+                </Box>
+              </AccordionSummary>
+              <AccordionDetails>
               
               <FormGroup row sx={{ gap: 1 }}>
                 {availableTests.map((test) => (
@@ -1478,7 +1490,9 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
                   ))}
                 </Box>
               )}
-            </Paper>
+
+              </AccordionDetails>
+            </Accordion>
           </Grid>
           
           <Grid item xs={12}>
