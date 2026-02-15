@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import QRCode from 'qrcode.react';
 import { 
   AppBar, 
   Toolbar, 
@@ -1703,17 +1704,14 @@ const AppContent = () => {
                         )}
 
                         {/* QR Code */}
-                        {viewPrescriptionDialog.prescription.qrCode && (
+                        {viewPrescriptionDialog.prescription.id && (
                           <Box textAlign="center" sx={{ mb: 2 }}>
                             <Typography variant="subtitle2" gutterBottom>
                               Prescription QR Code
                             </Typography>
-                            <Box 
-                              component="img" 
-                              src={viewPrescriptionDialog.prescription.qrCode} 
-                              alt="QR Code"
-                              sx={{ width: 150, height: 150, border: '1px solid', borderColor: 'grey.300', borderRadius: 1 }}
-                            />
+                            <Box sx={{ p: 1, border: '1px solid', borderColor: 'grey.300', borderRadius: 1, display: 'inline-block' }}>
+                              <QRCode value={viewPrescriptionDialog.prescription.id} size={150} />
+                            </Box>
                           </Box>
                         )}
                       </Box>

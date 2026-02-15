@@ -337,7 +337,7 @@ const PrescriptionList = () => {
                     {selectedPrescription.id ? (
                       <>
                         <QRCode 
-                          value={`RX-${selectedPrescription.id}-${selectedPrescription.date}`}
+                          value={selectedPrescription.id}
                           size={150}
                           level="M"
                           includeMargin
