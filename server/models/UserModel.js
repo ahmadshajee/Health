@@ -64,6 +64,60 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  // Doctor profile and clinic images
+  profileImage: {
+    type: String,
+    default: ''
+  },
+  clinicLogo: {
+    type: String,
+    default: ''
+  },
+  signature: {
+    type: String,
+    default: ''
+  },
+  // Extended contact information for doctors
+  clinicName: {
+    type: String,
+    default: ''
+  },
+  alternateEmail: {
+    type: String,
+    default: ''
+  },
+  secondaryPhone: {
+    type: String,
+    default: ''
+  },
+  fax: {
+    type: String,
+    default: ''
+  },
+  whatsapp: {
+    type: String,
+    default: ''
+  },
+  website: {
+    type: String,
+    default: ''
+  },
+  linkedin: {
+    type: String,
+    default: ''
+  },
+  twitter: {
+    type: String,
+    default: ''
+  },
+  facebook: {
+    type: String,
+    default: ''
+  },
+  instagram: {
+    type: String,
+    default: ''
+  },
   // Doctor's linked patients (patients added via "Add Existing")
   linkedPatients: {
     type: [String], // Array of patient IDs

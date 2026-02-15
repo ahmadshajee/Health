@@ -58,7 +58,13 @@ import {
   Close as CloseIcon,
   LocalHospital as LocalHospitalIcon,
   Medication as MedicationIcon,
-  QrCode as QrCodeIcon
+  QrCode as QrCodeIcon,
+  Business as BusinessIcon,
+  Language as LanguageIcon,
+  PhotoCamera as PhotoCameraIcon,
+  ContactPhone as ContactPhoneIcon,
+  Link as LinkIcon,
+  Create as CreateIcon
 } from '@mui/icons-material';
 import axios from 'axios';
 
@@ -160,9 +166,27 @@ const AppContent = () => {
     email: '',
     clinicAddress: '',
     experience: '',
-    qualifications: ''
+    qualifications: '',
+    // Profile and clinic images
+    profileImage: '',
+    clinicLogo: '',
+    signature: '',
+    // Extended contact information
+    clinicName: '',
+    alternateEmail: '',
+    secondaryPhone: '',
+    fax: '',
+    whatsapp: '',
+    website: '',
+    linkedin: '',
+    twitter: '',
+    facebook: '',
+    instagram: ''
   });
   const [securityLoading, setSecurityLoading] = useState(false);
+  const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
+  const [uploadingClinicLogo, setUploadingClinicLogo] = useState(false);
+  const [uploadingSignature, setUploadingSignature] = useState(false);
 
   // Profile state
   const [profileTab, setProfileTab] = useState(0); // 0: Personal, 1: Allergies, 2: History, 3: Habits
@@ -468,7 +492,22 @@ const AppContent = () => {
         email: user.email || '',
         clinicAddress: user.clinicAddress || user.address || '',
         experience: user.experience || '',
-        qualifications: user.qualifications || ''
+        qualifications: user.qualifications || '',
+        // Profile and clinic images
+        profileImage: user.profileImage || '',
+        clinicLogo: user.clinicLogo || '',
+        signature: user.signature || '',
+        // Extended contact information
+        clinicName: user.clinicName || '',
+        alternateEmail: user.alternateEmail || '',
+        secondaryPhone: user.secondaryPhone || '',
+        fax: user.fax || '',
+        whatsapp: user.whatsapp || '',
+        website: user.website || '',
+        linkedin: user.linkedin || '',
+        twitter: user.twitter || '',
+        facebook: user.facebook || '',
+        instagram: user.instagram || ''
       }));
     }
   }, [user]);
@@ -587,6 +626,132 @@ const AppContent = () => {
     }));
   };
 
+  // Handle profile image upload for doctors
+  const handleDoctorProfileImageUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setSnackbar({ open: true, message: 'Invalid file type. Only JPEG, PNG, GIF and WebP are allowed.', severity: 'error' });
+      return;
+    }
+
+    if (file.size > 20 * 1024 * 1024) {
+      setSnackbar({ open: true, message: 'File size must be less than 20MB', severity: 'error' });
+      return;
+    }
+
+    setUploadingProfileImage(true);
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('profileImage', file);
+      
+      const response = await axios.post(`${API_BASE_URL}/api/doctors/upload-profile-image`, formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      setSecurityForm(prev => ({ ...prev, profileImage: response.data.url }));
+      setSnackbar({ open: true, message: 'Profile image uploaded successfully', severity: 'success' });
+    } catch (error) {
+      console.error('Error uploading profile image:', error);
+      setSnackbar({ open: true, message: 'Failed to upload profile image', severity: 'error' });
+    } finally {
+      setUploadingProfileImage(false);
+    }
+  };
+
+  // Handle clinic logo upload for doctors
+  const handleClinicLogoUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setSnackbar({ open: true, message: 'Invalid file type. Only JPEG, PNG, GIF and WebP are allowed.', severity: 'error' });
+      return;
+    }
+
+    if (file.size > 20 * 1024 * 1024) {
+      setSnackbar({ open: true, message: 'File size must be less than 20MB', severity: 'error' });
+      return;
+    }
+
+    setUploadingClinicLogo(true);
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('clinicLogo', file);
+      
+      const response = await axios.post(`${API_BASE_URL}/api/doctors/upload-clinic-logo`, formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      setSecurityForm(prev => ({ ...prev, clinicLogo: response.data.url }));
+      setSnackbar({ open: true, message: 'Clinic logo uploaded successfully', severity: 'success' });
+    } catch (error) {
+      console.error('Error uploading clinic logo:', error);
+      setSnackbar({ open: true, message: 'Failed to upload clinic logo', severity: 'error' });
+    } finally {
+      setUploadingClinicLogo(false);
+    }
+  };
+
+  // Handle signature upload for doctors
+  const handleSignatureUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setSnackbar({ open: true, message: 'Invalid file type. Only JPEG, PNG, GIF and WebP are allowed.', severity: 'error' });
+      return;
+    }
+
+    if (file.size > 20 * 1024 * 1024) {
+      setSnackbar({ open: true, message: 'File size must be less than 20MB', severity: 'error' });
+      return;
+    }
+
+    setUploadingSignature(true);
+    setSnackbar({ open: true, message: 'Removing background... (first time may take a moment to load AI model)', severity: 'info' });
+    
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('signature', file);
+      
+      const response = await axios.post(`${API_BASE_URL}/api/doctors/upload-signature`, formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      setSecurityForm(prev => ({ ...prev, signature: response.data.url }));
+      setSnackbar({ open: true, message: 'Signature uploaded successfully!', severity: 'success' });
+    } catch (error) {
+      console.error('Error uploading signature:', error);
+      setSnackbar({ open: true, message: 'Failed to upload signature', severity: 'error' });
+    } finally {
+      setUploadingSignature(false);
+    }
+  };
+
+  // Helper to get full image URL
+  const getImageUrl = (path) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    return `${API_BASE_URL}${path}`;
+  };
+
   const handleUpdateName = async () => {
     if (!securityForm.firstName.trim() || !securityForm.lastName.trim()) {
       setSnackbar({ open: true, message: 'First name and last name are required', severity: 'error' });
@@ -609,6 +774,21 @@ const AppContent = () => {
         updateData.clinicAddress = securityForm.clinicAddress;
         updateData.experience = securityForm.experience;
         updateData.qualifications = securityForm.qualifications;
+        // Profile and clinic images
+        updateData.profileImage = securityForm.profileImage;
+        updateData.clinicLogo = securityForm.clinicLogo;
+        updateData.signature = securityForm.signature;
+        // Extended contact information
+        updateData.clinicName = securityForm.clinicName;
+        updateData.alternateEmail = securityForm.alternateEmail;
+        updateData.secondaryPhone = securityForm.secondaryPhone;
+        updateData.fax = securityForm.fax;
+        updateData.whatsapp = securityForm.whatsapp;
+        updateData.website = securityForm.website;
+        updateData.linkedin = securityForm.linkedin;
+        updateData.twitter = securityForm.twitter;
+        updateData.facebook = securityForm.facebook;
+        updateData.instagram = securityForm.instagram;
       }
       
       await axios.put(`${API_BASE_URL}/api/users/profile`, 
@@ -2258,15 +2438,128 @@ const AppContent = () => {
             )}
             
             {activeContent === 'security' && (
-              <Box sx={{ maxWidth: 700, mx: 'auto', mt: 4 }}>
+              <Box sx={{ maxWidth: 800, mx: 'auto', mt: 4 }}>
                 <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
                   {user?.role === 'doctor' ? 'Doctor Profile' : 'Profile Settings'}
                 </Typography>
 
+                {/* Profile & Clinic Images Section - Doctor Only */}
+                {user?.role === 'doctor' && (
+                  <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+                    <Typography variant="h6" gutterBottom color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <PhotoCameraIcon /> Profile & Clinic Images
+                    </Typography>
+                    <Grid container spacing={4} sx={{ mt: 1 }}>
+                      {/* Profile Image */}
+                      <Grid item xs={12} sm={4}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <Typography variant="body2" color="textSecondary" gutterBottom>
+                            Profile Image
+                          </Typography>
+                          <Avatar
+                            src={getImageUrl(securityForm.profileImage)}
+                            sx={{ width: 120, height: 120, mb: 2, border: '3px solid #1976d2' }}
+                          >
+                            <PersonIcon sx={{ fontSize: 60 }} />
+                          </Avatar>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            id="profile-image-upload"
+                            onChange={handleDoctorProfileImageUpload}
+                            style={{ display: 'none' }}
+                          />
+                          <label htmlFor="profile-image-upload">
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              component="span"
+                              startIcon={uploadingProfileImage ? <CircularProgress size={16} /> : <PhotoCameraIcon />}
+                              disabled={uploadingProfileImage}
+                            >
+                              {uploadingProfileImage ? 'Uploading...' : 'Upload Photo'}
+                            </Button>
+                          </label>
+                        </Box>
+                      </Grid>
+                      
+                      {/* Clinic Logo */}
+                      <Grid item xs={12} sm={4}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <Typography variant="body2" color="textSecondary" gutterBottom>
+                            Clinic Logo
+                          </Typography>
+                          <Avatar
+                            variant="rounded"
+                            src={getImageUrl(securityForm.clinicLogo)}
+                            sx={{ width: 120, height: 120, mb: 2, border: '3px solid #4caf50' }}
+                          >
+                            <BusinessIcon sx={{ fontSize: 60 }} />
+                          </Avatar>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            id="clinic-logo-upload"
+                            onChange={handleClinicLogoUpload}
+                            style={{ display: 'none' }}
+                          />
+                          <label htmlFor="clinic-logo-upload">
+                            <Button
+                              variant="outlined"
+                              color="success"
+                              size="small"
+                              component="span"
+                              startIcon={uploadingClinicLogo ? <CircularProgress size={16} /> : <BusinessIcon />}
+                              disabled={uploadingClinicLogo}
+                            >
+                              {uploadingClinicLogo ? 'Uploading...' : 'Upload Logo'}
+                            </Button>
+                          </label>
+                        </Box>
+                      </Grid>
+
+                      {/* Signature */}
+                      <Grid item xs={12} sm={4}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <Typography variant="body2" color="textSecondary" gutterBottom>
+                            Signature
+                          </Typography>
+                          <Avatar
+                            variant="rounded"
+                            src={getImageUrl(securityForm.signature)}
+                            sx={{ width: 150, height: 80, mb: 2, border: '3px solid #9c27b0', bgcolor: 'white' }}
+                          >
+                            <CreateIcon sx={{ fontSize: 40 }} />
+                          </Avatar>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            id="signature-upload"
+                            onChange={handleSignatureUpload}
+                            style={{ display: 'none' }}
+                          />
+                          <label htmlFor="signature-upload">
+                            <Button
+                              variant="outlined"
+                              color="secondary"
+                              size="small"
+                              component="span"
+                              startIcon={uploadingSignature ? <CircularProgress size={16} /> : <CreateIcon />}
+                              disabled={uploadingSignature}
+                            >
+                              {uploadingSignature ? 'Uploading...' : 'Upload Signature'}
+                            </Button>
+                          </label>
+                        </Box>
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                )}
+
                 {/* Basic Information Section */}
                 <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-                  <Typography variant="h6" gutterBottom color="primary">
-                    Basic Information
+                  <Typography variant="h6" gutterBottom color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <PersonIcon /> Basic Information
                   </Typography>
                   <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
@@ -2303,8 +2596,8 @@ const AppContent = () => {
                 {/* Doctor-specific Professional Information */}
                 {user?.role === 'doctor' && (
                   <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-                    <Typography variant="h6" gutterBottom color="primary">
-                      Professional Information
+                    <Typography variant="h6" gutterBottom color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <LocalHospitalIcon /> Professional Information
                     </Typography>
                     <Grid container spacing={2}>
                       <Grid item xs={12} sm={6}>
@@ -2351,21 +2644,31 @@ const AppContent = () => {
                   </Paper>
                 )}
 
-                {/* Contact Information - for doctors */}
+                {/* Clinic Information - for doctors */}
                 {user?.role === 'doctor' && (
                   <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-                    <Typography variant="h6" gutterBottom color="primary">
-                      Contact Information
+                    <Typography variant="h6" gutterBottom color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <BusinessIcon /> Clinic Information
                     </Typography>
                     <Grid container spacing={2}>
                       <Grid item xs={12} sm={6}>
                         <TextField
-                          label="Contact Number"
-                          value={securityForm.contactNumber}
-                          onChange={handleSecurityFormChange('contactNumber')}
+                          label="Clinic Name"
+                          value={securityForm.clinicName}
+                          onChange={handleSecurityFormChange('clinicName')}
                           fullWidth
                           variant="outlined"
-                          placeholder="Phone number for patients"
+                          placeholder="Your clinic or hospital name"
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="Website"
+                          value={securityForm.website}
+                          onChange={handleSecurityFormChange('website')}
+                          fullWidth
+                          variant="outlined"
+                          placeholder="https://www.yourclinic.com"
                         />
                       </Grid>
                       <Grid item xs={12}>
@@ -2378,6 +2681,119 @@ const AppContent = () => {
                           multiline
                           rows={2}
                           placeholder="Your clinic or hospital address"
+                        />
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                )}
+
+                {/* Contact Information - for doctors */}
+                {user?.role === 'doctor' && (
+                  <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+                    <Typography variant="h6" gutterBottom color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <ContactPhoneIcon /> Contact Information
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="Primary Phone"
+                          value={securityForm.contactNumber}
+                          onChange={handleSecurityFormChange('contactNumber')}
+                          fullWidth
+                          variant="outlined"
+                          placeholder="Primary phone number"
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="Secondary Phone"
+                          value={securityForm.secondaryPhone}
+                          onChange={handleSecurityFormChange('secondaryPhone')}
+                          fullWidth
+                          variant="outlined"
+                          placeholder="Alternative phone number"
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="Alternate Email"
+                          value={securityForm.alternateEmail}
+                          onChange={handleSecurityFormChange('alternateEmail')}
+                          fullWidth
+                          variant="outlined"
+                          type="email"
+                          placeholder="secondary@email.com"
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="Fax"
+                          value={securityForm.fax}
+                          onChange={handleSecurityFormChange('fax')}
+                          fullWidth
+                          variant="outlined"
+                          placeholder="Fax number"
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="WhatsApp"
+                          value={securityForm.whatsapp}
+                          onChange={handleSecurityFormChange('whatsapp')}
+                          fullWidth
+                          variant="outlined"
+                          placeholder="+91 XXXXXXXXXX"
+                        />
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                )}
+
+                {/* Social Media Links - for doctors */}
+                {user?.role === 'doctor' && (
+                  <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+                    <Typography variant="h6" gutterBottom color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <LinkIcon /> Social Media Links
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="LinkedIn"
+                          value={securityForm.linkedin}
+                          onChange={handleSecurityFormChange('linkedin')}
+                          fullWidth
+                          variant="outlined"
+                          placeholder="https://linkedin.com/in/yourprofile"
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="Twitter / X"
+                          value={securityForm.twitter}
+                          onChange={handleSecurityFormChange('twitter')}
+                          fullWidth
+                          variant="outlined"
+                          placeholder="https://twitter.com/yourhandle"
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="Facebook"
+                          value={securityForm.facebook}
+                          onChange={handleSecurityFormChange('facebook')}
+                          fullWidth
+                          variant="outlined"
+                          placeholder="https://facebook.com/yourpage"
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="Instagram"
+                          value={securityForm.instagram}
+                          onChange={handleSecurityFormChange('instagram')}
+                          fullWidth
+                          variant="outlined"
+                          placeholder="https://instagram.com/yourhandle"
                         />
                       </Grid>
                     </Grid>

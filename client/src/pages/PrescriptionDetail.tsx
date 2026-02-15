@@ -225,7 +225,7 @@ const PrescriptionDetail = () => {
                   mt: 1
                 }}
               >
-                <QRCode value={prescription.qrCode} size={150} />
+                <QRCode value={prescription.id} size={150} />
               </Box>
               
               <Typography variant="caption" color="textSecondary" sx={{ mt: 1, textAlign: 'center' }}>

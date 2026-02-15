@@ -427,6 +427,20 @@ router.put('/profile', auth, async (req, res) => {
       clinicAddress,
       experience,
       qualifications,
+      // New doctor profile fields
+      profileImage,
+      clinicLogo,
+      clinicName,
+      alternateEmail,
+      secondaryPhone,
+      fax,
+      whatsapp,
+      website,
+      linkedin,
+      twitter,
+      facebook,
+      instagram,
+      // Patient fields
       dateOfBirth, 
       address, 
       phone, 
@@ -447,7 +461,19 @@ router.put('/profile', auth, async (req, res) => {
         licenseNumber,
         clinicAddress,
         experience,
-        qualifications
+        qualifications,
+        profileImage,
+        clinicLogo,
+        clinicName,
+        alternateEmail,
+        secondaryPhone,
+        fax,
+        whatsapp,
+        website,
+        linkedin,
+        twitter,
+        facebook,
+        instagram
       }),
       ...(req.user.role === 'patient' && { dateOfBirth, address, phone, bloodType, allergies, chronicConditions, emergencyContact, gender, diseaseHistory })
     };

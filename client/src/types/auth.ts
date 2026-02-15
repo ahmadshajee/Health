@@ -12,6 +12,25 @@ export interface Doctor extends User {
   role: 'doctor';
   specialization?: string;
   contactNumber?: string;
+  // Profile and clinic images
+  profileImage?: string;
+  clinicLogo?: string;
+  signature?: string;
+  // Extended contact information
+  clinicName?: string;
+  clinicAddress?: string;
+  alternateEmail?: string;
+  secondaryPhone?: string;
+  fax?: string;
+  whatsapp?: string;
+  website?: string;
+  linkedin?: string;
+  twitter?: string;
+  facebook?: string;
+  instagram?: string;
+  licenseNumber?: string;
+  experience?: string;
+  qualifications?: string;
 }
 
 export interface Patient extends User {

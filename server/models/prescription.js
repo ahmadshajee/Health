@@ -154,23 +154,15 @@ const findPrescriptionById = async (id) => {
  * @returns {Object} Created prescription object
  */
 const createPrescription = async (prescriptionData) => {
-  // Generate QR code for verification
+  // Generate prescription ID
   const prescriptionId = isMongoConnected() ? new mongoose.Types.ObjectId().toString() : Date.now().toString();
-  
-  const qrData = JSON.stringify({
-    id: prescriptionId,
-    doctorId: prescriptionData.doctorId,
-    patientId: prescriptionData.patientId,
-    createdAt: new Date().toISOString()
-  });
-  
-  const qrCode = await QRCode.toDataURL(qrData);
   
   if (isMongoConnected() && PrescriptionModel) {
     try {
       const newPrescription = new PrescriptionModel({
+        _id: prescriptionId,
         ...prescriptionData,
-        qrCode,
+        qrCode: prescriptionId,  // Store only the ObjectId for QR verification
         status: 'active'
       });
       await newPrescription.save();
@@ -189,7 +181,7 @@ const createPrescription = async (prescriptionData) => {
   const newPrescription = {
     id: prescriptionId,
     ...prescriptionData,
-    qrCode,
+    qrCode: prescriptionId,  // Store only the ID for QR verification
     status: 'active',
     createdAt: new Date().toISOString()
   };
