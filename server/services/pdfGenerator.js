@@ -7,6 +7,29 @@ const PDFDocument = require('pdfkit');
 const QRCode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
+const Image = require('../models/ImageModel');
+
+/**
+ * Load an image buffer from MongoDB by its API URL path.
+ * e.g. "/api/doctors/images/clinicLogo-123.png" → looks up filename "clinicLogo-123.png"
+ * Falls back to local file if MongoDB lookup fails.
+ */
+async function loadImageBuffer(urlPath) {
+  if (!urlPath) return null;
+  try {
+    // Extract filename from API path like /api/doctors/images/<filename>
+    const filename = urlPath.split('/').pop();
+    if (!filename) return null;
+    const imgDoc = await Image.findOne({ filename });
+    if (imgDoc && imgDoc.data) return imgDoc.data;
+  } catch (e) {
+    console.error('MongoDB image lookup error:', e.message);
+  }
+  // Fallback: try local file
+  const localPath = path.join(__dirname, '..', urlPath.replace(/^\//, ''));
+  if (fs.existsSync(localPath)) return fs.readFileSync(localPath);
+  return null;
+}
 
 // ── colour palette ──
 const C = {
@@ -209,17 +232,15 @@ async function generatePrescriptionPDF(res, prescriptionId, prescription, patien
   }
 
   // Right side – clinic logo (or clinic name fallback)
-  const clinicLogoPath = doctor.clinicLogo
-    ? path.join(__dirname, '..', doctor.clinicLogo.replace(/^\//, ''))
-    : null;
+  const clinicLogoBuf = await loadImageBuffer(doctor.clinicLogo);
 
-  if (clinicLogoPath && fs.existsSync(clinicLogoPath)) {
+  if (clinicLogoBuf) {
     try {
       // Fit the logo into the right portion of the header box
       const logoMaxW = 120, logoMaxH = 65;
       const logoX = PW - M - logoMaxW - 8;
       const logoY = y + 6;
-      doc.image(clinicLogoPath, logoX, logoY, {
+      doc.image(clinicLogoBuf, logoX, logoY, {
         fit: [logoMaxW, logoMaxH],
         align: 'center',
         valign: 'center'
@@ -589,10 +610,8 @@ async function generatePrescriptionPDF(res, prescriptionId, prescription, patien
   }
 
   // Signature & stamp section height (accounts for signature image if present)
-  const sigImgPath = doctor.signature
-    ? path.join(__dirname, '..', doctor.signature.replace(/^\//, ''))
-    : null;
-  const hasSignatureImg = sigImgPath && fs.existsSync(sigImgPath);
+  const signatureBuf = await loadImageBuffer(doctor.signature);
+  const hasSignatureImg = !!signatureBuf;
   const sigStampH = hasSignatureImg ? 155 : 115;
   stickyTotalH += sigStampH;
 
@@ -667,15 +686,11 @@ async function generatePrescriptionPDF(res, prescriptionId, prescription, patien
   doc.font('Helvetica-Bold').fontSize(10).fillColor(C.text).text('Prescribed by:', M, sigY);
   
   // Display uploaded signature image if available
-  const signaturePath = doctor.signature
-    ? path.join(__dirname, '..', doctor.signature.replace(/^\//, ''))
-    : null;
-  
-  if (signaturePath && fs.existsSync(signaturePath)) {
+  if (signatureBuf) {
     try {
       // Render the signature image
       const sigImgW = 150, sigImgH = 50;
-      doc.image(signaturePath, M, sigY + 14, {
+      doc.image(signatureBuf, M, sigY + 14, {
         fit: [sigImgW, sigImgH],
         align: 'left',
         valign: 'center'
