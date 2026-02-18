@@ -61,7 +61,6 @@ app.use(cors({
     'http://192.168.1.2:5000',
     'https://ahmadshajee.github.io',
     'https://ahmadshajee.github.io/Health',
-    'https://health-ahmadshajee.vercel.app',
     'https://medizo.life',
     'https://www.medizo.life',
     'http://medizo.life',
