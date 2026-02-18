@@ -401,7 +401,10 @@ async function generatePrescriptionPDF(res, prescriptionId, prescription, patien
     medsTotalH += 20; // table header
     meds.forEach((med) => {
       doc.font('Helvetica').fontSize(8.5);
-      const instrStr = med.instructions || med.timing || '-';
+      let instrParts__ = [];
+      if (med.timing) instrParts__.push(med.timing);
+      if (med.instructions) instrParts__.push(med.instructions);
+      const instrStr = instrParts__.length > 0 ? instrParts__.join(' | ') : '-';
       const instrH = doc.heightOfString(instrStr, { width: col.instr.w - 8 });
       const nameStr = med.name + (med.type ? `\n(${med.type})` : '');
       doc.font('Helvetica-Bold').fontSize(9);
@@ -449,7 +452,10 @@ async function generatePrescriptionPDF(res, prescriptionId, prescription, patien
     meds.forEach((med, idx) => {
       // compute row height
       doc.font('Helvetica').fontSize(8.5);
-      const instrStr = med.instructions || med.timing || '-';
+      let instrParts_ = [];
+      if (med.timing) instrParts_.push(med.timing);
+      if (med.instructions) instrParts_.push(med.instructions);
+      const instrStr = instrParts_.length > 0 ? instrParts_.join(' | ') : '-';
       const instrH = doc.heightOfString(instrStr, { width: col.instr.w - 8 });
       const nameStr = med.name + (med.type ? `\n(${med.type})` : '');
       doc.font('Helvetica-Bold').fontSize(9);
@@ -471,7 +477,12 @@ async function generatePrescriptionPDF(res, prescriptionId, prescription, patien
       }
 
       let dosStr = med.dosage || '';
-      if (med.frequency && !dosStr.includes(med.frequency)) dosStr = dosStr || med.frequency;
+      if (med.frequency) {
+        const freqMap = {'1': 'Once daily', '2': 'Twice daily', '3': 'Thrice daily', '4': 'Four times daily', 'SOS': 'As needed (SOS)'};
+        const freqLabel = freqMap[med.frequency] || med.frequency;
+        if (dosStr) dosStr += ` (${freqLabel})`;
+        else dosStr = freqLabel;
+      }
       doc.font('Helvetica').fontSize(9).fillColor(C.text)
         .text(dosStr || '-', col.dos.x + 4, rowY + 4, { width: col.dos.w - 8, align: 'center' });
 
@@ -485,8 +496,13 @@ async function generatePrescriptionPDF(res, prescriptionId, prescription, patien
       doc.font('Helvetica').fontSize(9).fillColor(C.text)
         .text(durStr || '-', col.dur.x + 4, rowY + 4, { width: col.dur.w - 8, align: 'center' });
 
+      // Build combined instructions from timing, frequency, and instructions fields
+      let instrParts = [];
+      if (med.timing) instrParts.push(med.timing);
+      if (med.instructions) instrParts.push(med.instructions);
+      const combinedInstrStr = instrParts.length > 0 ? instrParts.join(' | ') : '-';
       doc.font('Helvetica').fontSize(8.5).fillColor(C.text)
-        .text(instrStr, col.instr.x + 4, rowY + 4, { width: col.instr.w - 8 });
+        .text(combinedInstrStr, col.instr.x + 4, rowY + 4, { width: col.instr.w - 8 });
 
       // row borders
       doc.strokeColor(C.border).lineWidth(0.3);
