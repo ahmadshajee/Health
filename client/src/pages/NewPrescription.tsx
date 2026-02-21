@@ -896,6 +896,7 @@ const NewPrescription = () => {
                   label="Next Appointment Date"
                   type="date"
                   InputLabelProps={{ shrink: true }}
+                  inputProps={{ min: new Date().toISOString().split('T')[0] }}
                   value={formData.followUpInfo?.appointmentDate || ''}
                   onChange={handleFollowUpChange('appointmentDate')}
                 />

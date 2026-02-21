@@ -65,7 +65,21 @@ import {
   PhotoCamera as PhotoCameraIcon,
   ContactPhone as ContactPhoneIcon,
   Link as LinkIcon,
-  Create as CreateIcon
+  Create as CreateIcon,
+  Description as DescriptionIcon,
+  QrCodeScanner as QrCodeScannerIcon,
+  CloudDownload as CloudDownloadIcon,
+  VerifiedUser as VerifiedUserIcon,
+  Notifications as NotificationsIcon,
+  History as HistoryIcon,
+  ArrowForward as ArrowForwardIcon,
+  ArrowDownward as ArrowDownwardIcon,
+  KeyboardArrowUp as KeyboardArrowUpIcon,
+  Email as EmailIcon,
+  Phone as PhoneIcon,
+  OpenInNew as OpenInNewIcon,
+  Favorite as FavoriteIcon,
+  LocationOn as LocationOnIcon
 } from '@mui/icons-material';
 import axios from 'axios';
 
@@ -859,6 +873,24 @@ const AppContent = () => {
 
   return (
     <div className="App">
+      {/* Full-screen hospital background image – shown only on the landing page */}
+      {!isAuthenticated && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            zIndex: -1,
+            backgroundImage: 'url("https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&w=1920&q=80")',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            opacity: 0.5,
+          }}
+        />
+      )}
       <AppBar position="static">
         <Toolbar sx={{ justifyContent: 'space-between' }}>
           {/* Left side - Logo and Title */}
@@ -1090,6 +1122,147 @@ const AppContent = () => {
           </Paper>
         )}
 
+        {/* ─── HOW IT WORKS & FEATURES (landing page only) ─── */}
+        {!isAuthenticated && (
+          <Box
+            sx={{
+              my: { xs: 4, md: 6 },
+              borderRadius: 4,
+              background: 'rgba(255,255,255,0.70)',
+              backdropFilter: 'blur(10px)',
+              boxShadow: '0 8px 40px rgba(0,0,0,0.12)',
+              px: { xs: 2, sm: 4, md: 6 },
+              py: { xs: 4, md: 6 },
+            }}
+          >
+            {/* ── How It Works ── */}
+            <Box sx={{ textAlign: 'center', mb: { xs: 5, md: 7 } }}>
+              <Typography variant="h4" component="h2" fontWeight={700} gutterBottom>
+                How It Works
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto', mb: 4 }}>
+                A simple, secure 4-step workflow that connects doctors and patients digitally.
+              </Typography>
+
+              <Grid container spacing={0} alignItems="center" justifyContent="center">
+                {[
+                  { icon: <PersonIcon sx={{ fontSize: 40 }} />, title: 'Doctor Logs In', desc: 'The doctor signs in and selects or adds a patient.', color: '#1565c0' },
+                  { icon: <DescriptionIcon sx={{ fontSize: 40 }} />, title: 'Creates Prescription', desc: 'Fills diagnosis, medications, tests & follow-up details.', color: '#00838f' },
+                  { icon: <QrCodeScannerIcon sx={{ fontSize: 40 }} />, title: 'QR Code Generated', desc: 'A unique QR code is attached for tamper-proof verification.', color: '#6a1b9a' },
+                  { icon: <CloudDownloadIcon sx={{ fontSize: 40 }} />, title: 'Patient Downloads', desc: 'The patient views and downloads the prescription as PDF.', color: '#2e7d32' }
+                ].map((step, idx, arr) => (
+                  <React.Fragment key={idx}>
+                    <Grid item xs={12} sm={6} md={2.5}>
+                      <Box
+                        sx={{
+                          display: 'flex', flexDirection: 'column', alignItems: 'center',
+                          p: { xs: 2, md: 2.5 },
+                          borderRadius: 3,
+                          border: `1.5px solid ${step.color}33`,
+                          transition: 'transform 0.2s, box-shadow 0.2s',
+                          '&:hover': { transform: 'translateY(-4px)', boxShadow: `0 8px 24px ${step.color}44` },
+                          mx: { xs: 2, md: 0.5 },
+                          my: { xs: 1, md: 0 },
+                        }}
+                      >
+                        <Avatar sx={{
+                          width: 72, height: 72, bgcolor: step.color, mb: 1.5,
+                          boxShadow: `0 4px 20px ${step.color}55`
+                        }}>
+                          {step.icon}
+                        </Avatar>
+                        <Chip label={`Step ${idx + 1}`} size="small" sx={{ mb: 1, bgcolor: step.color, color: '#fff', fontWeight: 600 }} />
+                        <Typography variant="subtitle1" fontWeight={700}>{step.title}</Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 200, mt: 0.5 }}>
+                          {step.desc}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    {idx < arr.length - 1 && (
+                      <Grid item xs={12} md={0.5} sx={{ display: 'flex', justifyContent: 'center' }}>
+                        <ArrowForwardIcon sx={{ fontSize: 28, color: 'grey.500', display: { xs: 'none', md: 'block' } }} />
+                        <ArrowDownwardIcon sx={{ fontSize: 28, color: 'grey.500', display: { xs: 'block', md: 'none' } }} />
+                      </Grid>
+                    )}
+                  </React.Fragment>
+                ))}
+              </Grid>
+            </Box>
+
+            {/* Divider between sections */}
+            <Box sx={{ borderTop: '1px solid rgba(0,0,0,0.08)', mb: { xs: 5, md: 7 } }} />
+
+            {/* ── Features ── */}
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="h4" component="h2" fontWeight={700} gutterBottom>
+                Features
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto', mb: 4 }}>
+                Everything doctors and patients need — in one platform.
+              </Typography>
+
+              <Grid container spacing={3}>
+                {/* Doctor features */}
+                <Grid item xs={12}>
+                  <Typography variant="overline" color="primary" fontWeight={700} sx={{ letterSpacing: 2 }}>
+                    For Doctors
+                  </Typography>
+                </Grid>
+                {[
+                  { icon: <DescriptionIcon />, title: 'Digital Prescriptions', desc: 'Create comprehensive prescriptions with medications, tests, diet plans and more.' },
+                  { icon: <QrCodeIcon />,       title: 'QR Verification',      desc: 'Every prescription gets a unique QR code for authentication and quick access.' },
+                  { icon: <PersonIcon />,       title: 'Patient Management',   desc: 'Add, search and manage patients. View full prescription history at a glance.' },
+                  { icon: <HistoryIcon />,      title: 'Prescription History',  desc: 'Access old prescriptions while creating new ones. Never lose track of treatment.' },
+                  { icon: <NotificationsIcon />,title: 'Follow-up Tracking',   desc: 'Set follow-up dates, times and reminders. Track upcoming appointments.' },
+                  { icon: <CloudDownloadIcon />,title: 'PDF Generation',       desc: 'Auto-generate professional PDF prescriptions for printing or digital sharing.' }
+                ].map((f, i) => (
+                  <Grid item xs={12} sm={6} md={4} key={i}>
+                    <Paper elevation={0} sx={{
+                      p: 3, height: '100%', borderRadius: 3,
+                      background: 'rgba(255,255,255,0.55)',
+                      border: '1px solid rgba(25,118,210,0.15)',
+                      transition: 'box-shadow 0.25s, transform 0.25s',
+                      '&:hover': { boxShadow: 6, transform: 'translateY(-4px)', background: 'rgba(255,255,255,0.80)' }
+                    }}>
+                      <Avatar sx={{ bgcolor: '#e8f4fd', color: '#64b5f6', mb: 1.5, mx: 'auto' }}>{f.icon}</Avatar>
+                      <Typography variant="subtitle1" fontWeight={600}>{f.title}</Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{f.desc}</Typography>
+                    </Paper>
+                  </Grid>
+                ))}
+
+                {/* Patient features */}
+                <Grid item xs={12} sx={{ mt: 2 }}>
+                  <Typography variant="overline" color="secondary" fontWeight={700} sx={{ letterSpacing: 2 }}>
+                    For Patients
+                  </Typography>
+                </Grid>
+                {[
+                  { icon: <VerifiedUserIcon />,  title: 'Secure Access',        desc: 'Your health records are encrypted and accessible only to you and your doctor.' },
+                  { icon: <CloudDownloadIcon />,  title: 'Download Anytime',     desc: 'Download prescriptions as PDFs whenever you need — from any device.' },
+                  { icon: <QrCodeIcon />,         title: 'QR Scan & Verify',     desc: 'Scan the QR code on your prescription to instantly verify its authenticity.' },
+                  { icon: <MedicationIcon />,     title: 'Medication Details',   desc: 'View dosage, timing, meal relation and duration in a clear, readable format.' },
+                  { icon: <PersonIcon />,         title: 'Health Profile',       desc: 'Maintain allergies, disease history, habits and emergency contacts in one place.' },
+                  { icon: <AssignmentIcon />,     title: 'Prescription Archive', desc: 'Never lose a prescription again. Your complete history is stored digitally.' }
+                ].map((f, i) => (
+                  <Grid item xs={12} sm={6} md={4} key={i}>
+                    <Paper elevation={0} sx={{
+                      p: 3, height: '100%', borderRadius: 3,
+                      background: 'rgba(255,255,255,0.55)',
+                      border: '1px solid rgba(156,39,176,0.15)',
+                      transition: 'box-shadow 0.25s, transform 0.25s',
+                      '&:hover': { boxShadow: 6, transform: 'translateY(-4px)', background: 'rgba(255,255,255,0.80)' }
+                    }}>
+                      <Avatar sx={{ bgcolor: '#f8f0fc', color: '#ce93d8', mb: 1.5, mx: 'auto' }}>{f.icon}</Avatar>
+                      <Typography variant="subtitle1" fontWeight={600}>{f.title}</Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{f.desc}</Typography>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          </Box>
+        )}
         {isAuthenticated && activeContent === 'dashboard' && (
           <Grid container spacing={3}>
             <Grid item xs={12} md={4}>
@@ -2881,12 +3054,207 @@ const AppContent = () => {
           </Box>
         )}
         
-        <Box sx={{ mt: 8, mb: 4, textAlign: 'center' }}>
-          <Typography variant="body2" color="text.secondary">
-            © {new Date().getFullYear()} Medizo. Health on your fingertips. All rights reserved.
-          </Typography>
-        </Box>
+        <Box sx={{ mb: 6 }} />
       </Container>
+
+      {/* ─── FOOTER — full screen width ─── */}
+      <Box
+        component="footer"
+        sx={{
+          bgcolor: '#134F4D',
+          color: '#fff',
+          pt: { xs: 5, md: 7 },
+          pb: 0,
+          width: '100%',
+        }}
+      >
+        <Container maxWidth="lg">
+          <Grid container spacing={5}>
+
+                {/* Brand column */}
+                <Grid item xs={12} sm={6} md={3}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                    <img src="/LOGO.png" alt="Medizo" style={{ height: 36, marginRight: 10, borderRadius: 4 }} />
+                    <Typography variant="h6" fontWeight={700} sx={{ color: '#fff' }}>Medizo</Typography>
+                  </Box>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.72)', lineHeight: 1.8 }}>
+                    Health on your fingertips.<br />
+                    A digital prescription platform connecting doctors and patients — securely and seamlessly.
+                  </Typography>
+                  <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <LocationOnIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.60)' }} />
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.60)' }}>India</Typography>
+                  </Box>
+                </Grid>
+
+                {/* Quick Links */}
+                <Grid item xs={12} sm={6} md={3}>
+                  <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2, color: '#fff', letterSpacing: 0.5 }}>Quick Links</Typography>
+                  {[
+                    { label: 'Home',         action: () => { setActiveContent('dashboard'); window.scrollTo({ top: 0, behavior: 'smooth' }); } },
+                    { label: 'Login',        action: () => handleOpenAuthDialog(0) },
+                    { label: 'Register',     action: () => handleOpenAuthDialog(1) },
+                  ].map((link) => (
+                    <Box
+                      key={link.label}
+                      onClick={link.action}
+                      sx={{
+                        display: 'flex', alignItems: 'center', gap: 0.5,
+                        cursor: 'pointer', mb: 0.8,
+                        color: 'rgba(255,255,255,0.72)',
+                        fontSize: '0.875rem',
+                        '&:hover': { color: '#fff', textDecoration: 'underline' },
+                        transition: 'color 0.2s'
+                      }}
+                    >
+                      <ArrowForwardIcon sx={{ fontSize: 13 }} />
+                      {link.label}
+                    </Box>
+                  ))}
+                </Grid>
+
+                {/* Contact */}
+                <Grid item xs={12} sm={6} md={3}>
+                  <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2, color: '#fff', letterSpacing: 0.5 }}>Contact Us</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                    <EmailIcon sx={{ fontSize: 18, color: 'rgba(255,255,255,0.60)' }} />
+                    <Typography
+                      component="a"
+                      href="mailto:info@medizo.health"
+                      variant="body2"
+                      sx={{ color: 'rgba(255,255,255,0.80)', textDecoration: 'none', '&:hover': { color: '#fff' } }}
+                    >
+                      info@medizo.health
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                    <PhoneIcon sx={{ fontSize: 18, color: 'rgba(255,255,255,0.60)' }} />
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.80)' }}>
+                      +91-9800000000
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <EmailIcon sx={{ fontSize: 18, color: 'rgba(255,255,255,0.60)' }} />
+                    <Typography
+                      component="a"
+                      href="mailto:support@medizo.health"
+                      variant="body2"
+                      sx={{ color: 'rgba(255,255,255,0.80)', textDecoration: 'none', '&:hover': { color: '#fff' } }}
+                    >
+                      support@medizo.health
+                    </Typography>
+                  </Box>
+                </Grid>
+
+                {/* Social Media */}
+                <Grid item xs={12} sm={6} md={3}>
+                  <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2, color: '#fff', letterSpacing: 0.5 }}>Follow Us</Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.2 }}>
+                    {[
+                      {
+                        label: 'Facebook',
+                        href: 'https://facebook.com/medizo',
+                        icon: (
+                          <Box component="svg" viewBox="0 0 24 24" sx={{ width: 20, height: 20, fill: '#fff' }}>
+                            <path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3l-.5 3H13v6.95C18.05 20.45 22 16.64 22 12z" />
+                          </Box>
+                        )
+                      },
+                      {
+                        label: 'Twitter / X',
+                        href: 'https://twitter.com/medizo',
+                        icon: (
+                          <Box component="svg" viewBox="0 0 24 24" sx={{ width: 20, height: 20, fill: '#fff' }}>
+                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                          </Box>
+                        )
+                      },
+                      {
+                        label: 'LinkedIn',
+                        href: 'https://linkedin.com/company/medizo',
+                        icon: (
+                          <Box component="svg" viewBox="0 0 24 24" sx={{ width: 20, height: 20, fill: '#fff' }}>
+                            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                          </Box>
+                        )
+                      },
+                    ].map((s) => (
+                      <Box
+                        key={s.label}
+                        component="a"
+                        href={s.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{
+                          display: 'flex', alignItems: 'center', gap: 1.5,
+                          color: 'rgba(255,255,255,0.80)',
+                          textDecoration: 'none',
+                          fontSize: '0.875rem',
+                          '&:hover': { color: '#fff', '& .social-icon-bg': { bgcolor: 'rgba(255,255,255,0.25)' } },
+                          transition: 'color 0.2s'
+                        }}
+                      >
+                        <Box
+                          className="social-icon-bg"
+                          sx={{
+                            width: 32, height: 32, borderRadius: '50%',
+                            bgcolor: 'rgba(255,255,255,0.12)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'background 0.2s',
+                            flexShrink: 0
+                          }}
+                        >
+                          {s.icon}
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
+                          Medizo@{s.label}
+                          <OpenInNewIcon sx={{ fontSize: 12, opacity: 0.6 }} />
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                </Grid>
+              </Grid>
+
+              {/* Divider */}
+              <Box sx={{ borderTop: '1px solid rgba(255,255,255,0.15)', mt: 5, pt: 3, pb: 3 }}>
+                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.55)', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    © {new Date().getFullYear()} Medizo. All rights reserved.
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map((item) => (
+                      <Typography
+                        key={item}
+                        component="a"
+                        href="#"
+                        variant="caption"
+                        sx={{ color: 'rgba(255,255,255,0.50)', textDecoration: 'none', '&:hover': { color: '#fff' } }}
+                      >
+                        {item}
+                      </Typography>
+                    ))}
+                  </Box>
+                </Box>
+              </Box>
+            </Container>
+        </Box>
+
+        {/* Back to Top */}
+        <Box
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          sx={{
+            position: 'fixed', bottom: 24, right: 24, zIndex: 999,
+            width: 44, height: 44, borderRadius: '50%',
+            bgcolor: '#134F4D', color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+            transition: 'background 0.2s, transform 0.2s',
+            '&:hover': { bgcolor: '#0d3836', transform: 'translateY(-3px)' }
+          }}
+        >
+          <KeyboardArrowUpIcon />
+        </Box>
     </div>
   );
 };

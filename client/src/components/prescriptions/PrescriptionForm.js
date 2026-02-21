@@ -45,7 +45,12 @@ import {
   NightsStay as NightIcon,
   ExpandMore as ExpandMoreIcon,
   History as HistoryIcon,
-  Science as ScienceIcon
+  Science as ScienceIcon,
+  Restaurant as WithFoodIcon,
+  FreeBreakfast as BeforeFoodIcon,
+  DinnerDining as AfterFoodIcon,
+  LocalCafe as EmptyStomachIcon,
+  Schedule as AnyTimeIcon
 } from '@mui/icons-material';
 import { Html5Qrcode } from 'html5-qrcode';
 import { usersAPI, prescriptionsAPI } from '../../services/api';
@@ -115,7 +120,7 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
     patientEmail: '',
     diagnosis: '',
     medications: [
-      { name: '', dosage: '', frequency: '', timing: '', durationWeeks: '', durationDays: '' }
+      { name: '', dosage: '', frequency: '', timing: '', mealRelation: '', durationWeeks: '', durationDays: '' }
     ],
     testsRequired: [],
     instructions: '',
@@ -165,6 +170,7 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
   const [newLifestyle, setNewLifestyle] = useState('');
   const [newWarning, setNewWarning] = useState('');
   const [newBringItem, setNewBringItem] = useState('');
+  const [newCustomTest, setNewCustomTest] = useState('');
 
   // Fetch patients when component mounts
   useEffect(() => {
@@ -658,7 +664,7 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
       ...prescription,
       medications: [
         ...prescription.medications,
-        { name: '', dosage: '', frequency: '', timing: '', durationWeeks: '', durationDays: '' }
+        { name: '', dosage: '', frequency: '', timing: '', mealRelation: '', durationWeeks: '', durationDays: '' }
       ]
     });
   };
@@ -1294,6 +1300,51 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
                   </Grid>
                   
                   <Grid item xs={12}>
+                    <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>Meal Relation</Typography>
+                    <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                      {[
+                        { key: 'with_food',     label: 'With Food',     icon: <WithFoodIcon sx={{ fontSize: 18 }} />,     color: '#1565c0', bg: '#e3f2fd', hoverBg: '#bbdefb', border: '#1565c0' },
+                        { key: 'before_food',   label: 'Before Food',   icon: <BeforeFoodIcon sx={{ fontSize: 18 }} />,   color: '#e65100', bg: '#fff3e0', hoverBg: '#ffe0b2', border: '#e65100' },
+                        { key: 'after_food',    label: 'After Food',    icon: <AfterFoodIcon sx={{ fontSize: 18 }} />,    color: '#6a1b9a', bg: '#f3e5f5', hoverBg: '#e1bee7', border: '#6a1b9a' },
+                        { key: 'empty_stomach', label: 'Empty Stomach', icon: <EmptyStomachIcon sx={{ fontSize: 18 }} />, color: '#00695c', bg: '#e0f2f1', hoverBg: '#b2dfdb', border: '#00695c' },
+                        { key: 'any_time',      label: 'Any Time',      icon: <AnyTimeIcon sx={{ fontSize: 18 }} />,      color: '#37474f', bg: '#eceff1', hoverBg: '#cfd8dc', border: '#37474f' }
+                      ].map((option) => {
+                        const isSelected = medication.mealRelation === option.label;
+                        return (
+                          <Box
+                            key={option.key}
+                            onClick={() => handleMedicationChange(index, 'mealRelation', isSelected ? '' : option.label)}
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 0.75,
+                              px: 2,
+                              py: 0.75,
+                              borderRadius: '20px',
+                              border: isSelected ? `2px solid ${option.border}` : '2px solid #e0e0e0',
+                              backgroundColor: isSelected ? option.bg : 'transparent',
+                              color: isSelected ? option.color : 'text.secondary',
+                              fontWeight: isSelected ? 600 : 400,
+                              fontSize: '0.82rem',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              userSelect: 'none',
+                              '&:hover': {
+                                backgroundColor: isSelected ? option.hoverBg : '#f5f5f5',
+                                borderColor: option.border,
+                                color: option.color
+                              }
+                            }}
+                          >
+                            {option.icon}
+                            {option.label}
+                          </Box>
+                        );
+                      })}
+                    </Box>
+                  </Grid>
+
+                  <Grid item xs={12}>
                     <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>Time of Day</Typography>
                     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                       {[
@@ -1461,7 +1512,47 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
                   />
                 ))}
               </FormGroup>
-              
+
+              {/* Others – custom test input */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
+                <TextField
+                  size="small"
+                  label="Other (specify test)"
+                  placeholder="e.g., Serum Ferritin"
+                  value={newCustomTest}
+                  onChange={(e) => setNewCustomTest(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const trimmed = newCustomTest.trim();
+                      if (trimmed && !prescription.testsRequired.includes(trimmed)) {
+                        setPrescription(prev => ({
+                          ...prev,
+                          testsRequired: [...prev.testsRequired, trimmed]
+                        }));
+                        setNewCustomTest('');
+                      }
+                    }
+                  }}
+                  sx={{ minWidth: 240 }}
+                />
+                <IconButton
+                  color="secondary"
+                  onClick={() => {
+                    const trimmed = newCustomTest.trim();
+                    if (trimmed && !prescription.testsRequired.includes(trimmed)) {
+                      setPrescription(prev => ({
+                        ...prev,
+                        testsRequired: [...prev.testsRequired, trimmed]
+                      }));
+                      setNewCustomTest('');
+                    }
+                  }}
+                >
+                  <AddIcon />
+                </IconButton>
+              </Box>
+
               {prescription.testsRequired.length > 0 && (
                 <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                   <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center', mr: 1 }}>
@@ -1723,6 +1814,7 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
                       label="Appointment Date"
                       type="date"
                       InputLabelProps={{ shrink: true }}
+                      inputProps={{ min: new Date().toISOString().split('T')[0] }}
                       value={prescription.followUpInfo?.appointmentDate || ''}
                       onChange={(e) => handleFollowUpInfoChange('appointmentDate', e.target.value)}
                     />
