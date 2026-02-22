@@ -1078,7 +1078,7 @@ const AppContent = () => {
         )}
 
         {!isAuthenticated && (
-          <Paper elevation={3} sx={{ p: 4, my: 4, background: 'linear-gradient(45deg, #f5f7ff 30%, #e8eaff 90%)' }}>
+          <Paper elevation={3} sx={{ p: 4, mt: 4, mb: 0, borderRadius: '16px 16px 0 0', background: 'rgba(255,255,255,0.70)', backdropFilter: 'blur(10px)', boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
             <Grid container spacing={4}>
               <Grid item xs={12} md={6}>
                 <Box sx={{ p: 2 }}>
@@ -1108,11 +1108,12 @@ const AppContent = () => {
                     Access your prescriptions securely. Download digital copies with QR verification. Never lose a prescription again.
                   </Typography>
                   <Button 
-                    variant="contained" 
+                    variant="outlined" 
                     size="large" 
                     color="secondary"
                     onClick={() => handleOpenAuthDialog(0, 'patient')}
                     startIcon={<PersonIcon />}
+                    sx={{ backgroundColor: 'white' }}
                   >
                     Login as Patient
                   </Button>
@@ -1126,8 +1127,9 @@ const AppContent = () => {
         {!isAuthenticated && (
           <Box
             sx={{
-              my: { xs: 4, md: 6 },
-              borderRadius: 4,
+              mt: 0,
+              mb: { xs: 4, md: 6 },
+              borderRadius: '0 0 16px 16px',
               background: 'rgba(255,255,255,0.70)',
               backdropFilter: 'blur(10px)',
               boxShadow: '0 8px 40px rgba(0,0,0,0.12)',
