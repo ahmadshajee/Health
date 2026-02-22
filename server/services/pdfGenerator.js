@@ -98,6 +98,7 @@ async function generatePrescriptionPDF(res, prescriptionId, prescription, patien
   const fuBring        = fuInfo.bringItems || [];
   const emergLine      = prescription.emergencyHelpline || '';
   const addNotes       = prescription.notes || '';
+  const specialInstr   = prescription.instructions || '';
   const vs             = prescription.vitalSigns || {};
 
   // patient helpers
@@ -403,6 +404,7 @@ async function generatePrescriptionPDF(res, prescriptionId, prescription, patien
       doc.font('Helvetica').fontSize(8.5);
       let instrParts__ = [];
       if (med.timing) instrParts__.push(med.timing);
+      if (med.mealRelation) instrParts__.push(med.mealRelation);
       if (med.instructions) instrParts__.push(med.instructions);
       const instrStr = instrParts__.length > 0 ? instrParts__.join(' | ') : '-';
       const instrH = doc.heightOfString(instrStr, { width: col.instr.w - 8 });
@@ -454,6 +456,7 @@ async function generatePrescriptionPDF(res, prescriptionId, prescription, patien
       doc.font('Helvetica').fontSize(8.5);
       let instrParts_ = [];
       if (med.timing) instrParts_.push(med.timing);
+      if (med.mealRelation) instrParts_.push(med.mealRelation);
       if (med.instructions) instrParts_.push(med.instructions);
       const instrStr = instrParts_.length > 0 ? instrParts_.join(' | ') : '-';
       const instrH = doc.heightOfString(instrStr, { width: col.instr.w - 8 });
@@ -496,9 +499,10 @@ async function generatePrescriptionPDF(res, prescriptionId, prescription, patien
       doc.font('Helvetica').fontSize(9).fillColor(C.text)
         .text(durStr || '-', col.dur.x + 4, rowY + 4, { width: col.dur.w - 8, align: 'center' });
 
-      // Build combined instructions from timing, frequency, and instructions fields
+      // Build combined instructions from timing, meal relation, frequency, and instructions fields
       let instrParts = [];
       if (med.timing) instrParts.push(med.timing);
+      if (med.mealRelation) instrParts.push(med.mealRelation);
       if (med.instructions) instrParts.push(med.instructions);
       const combinedInstrStr = instrParts.length > 0 ? instrParts.join(' | ') : '-';
       doc.font('Helvetica').fontSize(8.5).fillColor(C.text)
@@ -617,6 +621,14 @@ async function generatePrescriptionPDF(res, prescriptionId, prescription, patien
     stickyTotalH += fuBoxH + 10;
   }
 
+  // Special instructions height
+  let specialInstrH = 0;
+  if (specialInstr) {
+    doc.font('Helvetica').fontSize(9.5);
+    specialInstrH = doc.heightOfString(specialInstr, { width: CW - 130 }) + 10;
+    stickyTotalH += specialInstrH + 8;
+  }
+
   // Additional notes height
   let addNotesH = 0;
   if (addNotes) {
@@ -686,7 +698,14 @@ async function generatePrescriptionPDF(res, prescriptionId, prescription, patien
 
     y = fuStartY + fuBoxH + 8;
   }
-
+  // ─── SPECIAL INSTRUCTIONS ──────────────────────────────────
+  if (specialInstr) {
+    doc.font('Helvetica-Bold').fontSize(9.5).fillColor(C.text)
+      .text('Special Instructions: ', M, y, { continued: true });
+    doc.font('Helvetica').fontSize(9.5).text(specialInstr, { width: CW - 130 });
+    const siH = doc.heightOfString(specialInstr, { width: CW - 130 });
+    y += siH + 10;
+  }
   // ─── ADDITIONAL NOTES ──────────────────────────────────────────
   if (addNotes) {
     doc.font('Helvetica-Bold').fontSize(9.5).fillColor(C.text)

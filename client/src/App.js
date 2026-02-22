@@ -3169,7 +3169,8 @@ const AppContent = () => {
                   </Box>
                 </Grid>
 
-                {/* Quick Links */}
+                {/* Quick Links - only show when not logged in */}
+                {!isAuthenticated && (
                 <Grid item xs={12} sm={6} md={3}>
                   <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2, color: '#fff', letterSpacing: 0.5 }}>Quick Links</Typography>
                   {[
@@ -3194,6 +3195,7 @@ const AppContent = () => {
                     </Box>
                   ))}
                 </Grid>
+                )}
 
                 {/* Contact */}
                 <Grid item xs={12} sm={6} md={3}>

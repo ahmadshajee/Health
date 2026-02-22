@@ -1807,7 +1807,7 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
               </AccordionSummary>
               <AccordionDetails>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={4}>
+                  <Grid item xs={12} sm={6}>
                     <TextField
                       fullWidth
                       size="small"
@@ -1819,16 +1819,103 @@ const PrescriptionForm = ({ onCreatePrescription }) => {
                       onChange={(e) => handleFollowUpInfoChange('appointmentDate', e.target.value)}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <TextField
-                      fullWidth
-                      size="small"
-                      label="Appointment Time"
-                      type="time"
-                      InputLabelProps={{ shrink: true }}
-                      value={prescription.followUpInfo?.appointmentTime || ''}
-                      onChange={(e) => handleFollowUpInfoChange('appointmentTime', e.target.value)}
-                    />
+                  <Grid item xs={12} sm={6}>
+                    <Box sx={{ border: '1px solid rgba(0,0,0,0.23)', borderRadius: 1, px: 1.75, height: 40, position: 'relative', display: 'flex', alignItems: 'center', '&:hover': { borderColor: 'text.primary' } }}>
+                      <Typography variant="caption" sx={{ position: 'absolute', top: -9, left: 10, bgcolor: 'background.paper', px: 0.5, color: 'text.secondary', lineHeight: 1, fontSize: '0.78rem' }}>
+                        Appointment Time
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                        <FormControl variant="standard" sx={{ minWidth: 56 }}>
+                          <Select
+                            disableUnderline
+                            displayEmpty
+                            value={(() => {
+                              const t = prescription.followUpInfo?.appointmentTime || '';
+                              if (!t) return '';
+                              const h = parseInt(t.split(':')[0]);
+                              if (isNaN(h)) return '';
+                              const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+                              return String(h12);
+                            })()}
+                            onChange={(e) => {
+                              const t = prescription.followUpInfo?.appointmentTime || '12:00 AM';
+                              const colonIdx = t.indexOf(':');
+                              const rest = colonIdx >= 0 ? t.slice(colonIdx + 1) : '00 AM';
+                              const minStr = rest.slice(0, 2) || '00';
+                              const ampm = t.toUpperCase().includes('PM') ? 'PM' : 'AM';
+                              handleFollowUpInfoChange('appointmentTime', `${e.target.value}:${minStr} ${ampm}`);
+                            }}
+                            renderValue={(v) => v ? String(v).padStart(2, '0') : <span style={{ color: '#aaa' }}>HH</span>}
+                            sx={{ fontSize: '1.1rem', fontWeight: 600, '& .MuiSelect-select': { py: 0, pr: '24px !important' } }}
+                            MenuProps={{ PaperProps: { sx: { '& .MuiMenuItem-root': { fontSize: '1.05rem', minHeight: 44, justifyContent: 'center' } } } }}
+                          >
+                            {[...Array(12)].map((_, i) => (
+                              <MenuItem key={i + 1} value={String(i + 1)}>{String(i + 1).padStart(2, '0')}</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                        <Typography sx={{ fontWeight: 700, fontSize: '1.2rem', lineHeight: 1 }}>:</Typography>
+                        <FormControl variant="standard" sx={{ minWidth: 56 }}>
+                          <Select
+                            disableUnderline
+                            displayEmpty
+                            value={(() => {
+                              const t = prescription.followUpInfo?.appointmentTime || '';
+                              if (!t) return '';
+                              const colonIdx = t.indexOf(':');
+                              if (colonIdx < 0) return '';
+                              const minStr = t.slice(colonIdx + 1, colonIdx + 3);
+                              const minNum = parseInt(minStr);
+                              if (isNaN(minNum)) return '';
+                              return String(Math.round(minNum / 5) * 5 % 60).padStart(2, '0');
+                            })()}
+                            onChange={(e) => {
+                              const t = prescription.followUpInfo?.appointmentTime || '12:00 AM';
+                              const hr = t.split(':')[0] || '12';
+                              const ampm = t.toUpperCase().includes('PM') ? 'PM' : 'AM';
+                              handleFollowUpInfoChange('appointmentTime', `${hr}:${e.target.value} ${ampm}`);
+                            }}
+                            renderValue={(v) => v !== '' ? v : <span style={{ color: '#aaa' }}>MM</span>}
+                            sx={{ fontSize: '1.1rem', fontWeight: 600, '& .MuiSelect-select': { py: 0, pr: '24px !important' } }}
+                            MenuProps={{ PaperProps: { sx: { '& .MuiMenuItem-root': { fontSize: '1.05rem', minHeight: 44, justifyContent: 'center' } } } }}
+                          >
+                            {[...Array(12)].map((_, i) => {
+                              const m = String(i * 5).padStart(2, '0');
+                              return <MenuItem key={m} value={m}>{m}</MenuItem>;
+                            })}
+                          </Select>
+                        </FormControl>
+                        <Box sx={{ display: 'flex', ml: 1, borderRadius: 1.5, overflow: 'hidden', border: '1.5px solid', borderColor: 'primary.main' }}>
+                          {['AM', 'PM'].map((period) => {
+                            const current = (() => {
+                              const t = (prescription.followUpInfo?.appointmentTime || '').toUpperCase();
+                              return t.includes('PM') ? 'PM' : 'AM';
+                            })();
+                            const isActive = current === period;
+                            return (
+                              <Button
+                                key={period}
+                                onClick={() => {
+                                  const t = prescription.followUpInfo?.appointmentTime || '12:00 AM';
+                                  const parts = t.split(' ');
+                                  handleFollowUpInfoChange('appointmentTime', `${parts[0]} ${period}`);
+                                }}
+                                sx={{
+                                  px: 1.5, py: 0.4, minWidth: 48, minHeight: 30, borderRadius: 0,
+                                  bgcolor: isActive ? 'primary.main' : 'transparent',
+                                  color: isActive ? '#fff' : 'primary.main',
+                                  fontWeight: 700, fontSize: '0.85rem', letterSpacing: '0.04em',
+                                  '&:hover': { bgcolor: isActive ? 'primary.dark' : 'primary.50' },
+                                  border: 'none', transition: 'background 0.15s'
+                                }}
+                              >
+                                {period}
+                              </Button>
+                            );
+                          })}
+                        </Box>
+                      </Box>
+                    </Box>
                   </Grid>
                   <Grid item xs={12} sm={4}>
                     <TextField
