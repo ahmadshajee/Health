@@ -166,6 +166,43 @@ const AppContent = () => {
   const [viewPrescriptionDialog, setViewPrescriptionDialog] = useState({ open: false, prescription: null });
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [qrCodeDialogOpen, setQrCodeDialogOpen] = useState(false);
+  const [policyDialog, setPolicyDialog] = useState({ open: false, type: null });
+
+  const policyContent = {
+    'Privacy Policy': {
+      lastUpdated: 'February 2026',
+      sections: [
+        { title: 'Information We Collect', body: 'We collect information you provide directly to us when you create an account, including your name, email address, role (doctor or patient), and professional details such as medical license number and specialization for doctors. We also collect health-related data you input into the platform, including prescriptions, diagnoses, medications, and medical history.' },
+        { title: 'How We Use Your Information', body: 'Your information is used solely to provide the Medizo digital prescription platform services. This includes creating and managing prescriptions, enabling QR code verification, generating PDF documents, and facilitating secure communication between doctors and patients. We do not sell, rent, or share your personal data with third parties for marketing purposes.' },
+        { title: 'Data Security', body: 'All data is encrypted in transit using TLS/HTTPS. Passwords are hashed using industry-standard bcrypt encryption. Access to patient records is strictly limited to the treating doctor and the patient themselves. JWT tokens are used for session authentication and expire automatically to prevent unauthorized access.' },
+        { title: 'Data Retention', body: 'Prescription records are retained for a minimum of 7 years in compliance with standard medical record-keeping regulations. You may request deletion of your account and associated data at any time by contacting support@medizo.health, subject to legal obligations.' },
+        { title: 'Your Rights', body: 'You have the right to access, correct, or delete your personal data at any time. You may also request a copy of all data we hold about you. To exercise these rights, contact us at info@medizo.health.' },
+        { title: 'Contact', body: 'For any privacy-related concerns, email us at info@medizo.health or write to Medizo Health Technologies, India.' },
+      ]
+    },
+    'Terms of Service': {
+      lastUpdated: 'February 2026',
+      sections: [
+        { title: 'Acceptance of Terms', body: 'By accessing or using Medizo, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the platform. These terms apply to all users, including doctors, patients, and any other visitors.' },
+        { title: 'Medical Disclaimer', body: 'Medizo is a digital prescription management platform and is not a substitute for professional medical advice, diagnosis, or treatment. Prescriptions generated through Medizo are issued solely by licensed medical professionals registered on the platform. Always consult your healthcare provider for medical decisions.' },
+        { title: 'User Responsibilities', body: 'Doctors must hold a valid medical license and are solely responsible for the accuracy and appropriateness of prescriptions they create. Patients are responsible for using their prescriptions as directed by their doctor. All users must provide accurate information and maintain the confidentiality of their account credentials.' },
+        { title: 'Prohibited Use', body: 'You may not use Medizo for any unlawful purpose, to create fraudulent prescriptions, to impersonate a medical professional, or to attempt to gain unauthorized access to other users\' data. Violations will result in immediate account termination and may be reported to relevant authorities.' },
+        { title: 'Intellectual Property', body: 'All content, branding, and technology on Medizo, including the logo, design, and software, are the intellectual property of Medizo Health Technologies. You may not reproduce, distribute, or create derivative works without explicit written permission.' },
+        { title: 'Limitation of Liability', body: 'Medizo is provided "as is" without warranties of any kind. To the maximum extent permitted by law, Medizo Health Technologies shall not be liable for any indirect, incidental, or consequential damages arising from your use of the platform.' },
+      ]
+    },
+    'Cookie Policy': {
+      lastUpdated: 'February 2026',
+      sections: [
+        { title: 'What Are Cookies', body: 'Cookies are small text files placed on your device when you visit a website. They help the website remember your preferences and improve your experience. Medizo uses cookies and similar technologies to keep you logged in and to understand how you interact with our platform.' },
+        { title: 'Cookies We Use', body: 'Authentication Cookies: These are essential cookies used to maintain your login session securely. Without them, you would need to log in on every page. Session Cookies: Temporary cookies that expire when you close your browser, used to store temporary state such as your current view or form data.' },
+        { title: 'Third-Party Cookies', body: 'We use Google OAuth for authentication. Google may set cookies as part of this process, governed by Google\'s own Privacy Policy. We do not use advertising or tracking cookies from third parties.' },
+        { title: 'Managing Cookies', body: 'You can control cookies through your browser settings. Blocking essential cookies will prevent you from logging in to Medizo. Most browsers allow you to view, delete, and block cookies via their Settings or Preferences menu.' },
+        { title: 'Updates to This Policy', body: 'We may update this Cookie Policy from time to time. Changes will be posted on this page with an updated date. Continued use of Medizo after changes constitutes acceptance of the updated policy.' },
+        { title: 'Contact', body: 'For any questions about our use of cookies, please contact support@medizo.health.' },
+      ]
+    }
+  };
 
   // Security settings state
   const [securityForm, setSecurityForm] = useState({
@@ -1051,6 +1088,24 @@ const AppContent = () => {
       </Drawer>
 
       {/* Authentication Dialog */}
+
+      {/* Back Button — fixed top-left, shown when navigated away from dashboard */}
+      {isAuthenticated && activeContent !== 'dashboard' && (
+        <Box
+          onClick={() => setActiveContent('dashboard')}
+          sx={{
+            position: 'fixed', top: 80, left: 24, zIndex: 999,
+            width: 44, height: 44, borderRadius: '50%',
+            bgcolor: '#134F4D', color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+            transition: 'background 0.2s, transform 0.2s',
+            '&:hover': { bgcolor: '#0d3836', transform: 'translateX(-3px)' }
+          }}
+        >
+          <ArrowForwardIcon sx={{ transform: 'rotate(180deg)' }} />
+        </Box>
+      )}
       <Dialog 
         open={authDialogOpen} 
         onClose={handleCloseAuthDialog}
@@ -3245,10 +3300,10 @@ const AppContent = () => {
                     {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map((item) => (
                       <Typography
                         key={item}
-                        component="a"
-                        href="#"
+                        component="span"
                         variant="caption"
-                        sx={{ color: 'rgba(255,255,255,0.50)', textDecoration: 'none', '&:hover': { color: '#fff' } }}
+                        onClick={() => setPolicyDialog({ open: true, type: item })}
+                        sx={{ color: 'rgba(255,255,255,0.50)', textDecoration: 'none', cursor: 'pointer', '&:hover': { color: '#fff' } }}
                       >
                         {item}
                       </Typography>
@@ -3258,6 +3313,44 @@ const AppContent = () => {
               </Box>
             </Container>
         </Box>
+
+      {/* ─── Policy Dialogs ─── */}
+      <Dialog
+        open={policyDialog.open}
+        onClose={() => setPolicyDialog({ open: false, type: null })}
+        maxWidth="md"
+        fullWidth
+        scroll="paper"
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#134F4D', color: '#fff' }}>
+          <Typography variant="h6" fontWeight={700}>{policyDialog.type}</Typography>
+          <IconButton onClick={() => setPolicyDialog({ open: false, type: null })} sx={{ color: '#fff' }}><CloseIcon /></IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: { xs: 2, md: 4 } }}>
+          {policyDialog.type && (
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 3, display: 'block' }}>
+                Last updated: {policyContent[policyDialog.type]?.lastUpdated}
+              </Typography>
+              {policyContent[policyDialog.type]?.sections.map((sec, i) => (
+                <Box key={i} sx={{ mb: 3 }}>
+                  <Typography variant="subtitle1" fontWeight={700} color="#134F4D" gutterBottom>
+                    {i + 1}. {sec.title}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.8 }}>
+                    {sec.body}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setPolicyDialog({ open: false, type: null })} variant="contained" sx={{ bgcolor: '#134F4D', '&:hover': { bgcolor: '#0d3836' } }}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
 
         {/* Back to Top */}
         <Box
