@@ -872,8 +872,8 @@ const AppContent = () => {
   };
 
   return (
-    <div className="App">
-      {/* Full-screen hospital background image – shown only on the landing page */}
+    <Box className="App" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      {/* Full-screen background image */}
       {!isAuthenticated && (
         <Box
           sx={{
@@ -888,6 +888,23 @@ const AppContent = () => {
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
             opacity: 0.5,
+          }}
+        />
+      )}
+      {isAuthenticated && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            zIndex: -1,
+            backgroundImage: 'url("https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1920&q=80")',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            opacity: 0.18,
           }}
         />
       )}
@@ -1065,7 +1082,7 @@ const AppContent = () => {
         </DialogContent>
       </Dialog>
 
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4, flexGrow: 1 }}>
         {(!isAuthenticated || (isAuthenticated && activeContent === 'dashboard')) && (
           <Box sx={{ my: 4, textAlign: 'center' }}>
             <Typography variant="h3" component="h1" gutterBottom>
@@ -1266,10 +1283,10 @@ const AppContent = () => {
           </Box>
         )}
         {isAuthenticated && activeContent === 'dashboard' && (
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
+          <Grid container spacing={3} alignItems="stretch">
+            <Grid item xs={12} md={4} sx={{ display: 'flex' }}>
+              <Card sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                <CardContent sx={{ flexGrow: 1 }}>
                   <Avatar sx={{ bgcolor: 'primary.main', mb: 2 }}>
                     <AssignmentIcon />
                   </Avatar>
@@ -1293,9 +1310,9 @@ const AppContent = () => {
               </Card>
             </Grid>
             
-            <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
+            <Grid item xs={12} md={4} sx={{ display: 'flex' }}>
+              <Card sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                <CardContent sx={{ flexGrow: 1 }}>
                   <Avatar sx={{ bgcolor: 'secondary.main', mb: 2 }}>
                     <PersonIcon />
                   </Avatar>
@@ -1319,9 +1336,9 @@ const AppContent = () => {
               </Card>
             </Grid>
             
-            <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
+            <Grid item xs={12} md={4} sx={{ display: 'flex' }}>
+              <Card sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                <CardContent sx={{ flexGrow: 1 }}>
                   <Avatar sx={{ bgcolor: user?.role === 'doctor' ? 'primary.main' : 'error.main', mb: 2 }}>
                     {user?.role === 'doctor' ? <PersonIcon /> : <SecurityIcon />}
                   </Avatar>
@@ -3056,7 +3073,7 @@ const AppContent = () => {
           </Box>
         )}
         
-        <Box sx={{ mb: 6 }} />
+        <Box sx={{ mb: 10 }} />
       </Container>
 
       {/* ─── FOOTER — full screen width ─── */}
@@ -3065,13 +3082,13 @@ const AppContent = () => {
         sx={{
           bgcolor: '#134F4D',
           color: '#fff',
-          pt: { xs: 5, md: 7 },
+          pt: { xs: 3, md: 4 },
           pb: 0,
           width: '100%',
         }}
       >
         <Container maxWidth="lg">
-          <Grid container spacing={5}>
+          <Grid container spacing={3}>
 
                 {/* Brand column */}
                 <Grid item xs={12} sm={6} md={3}>
@@ -3219,7 +3236,7 @@ const AppContent = () => {
               </Grid>
 
               {/* Divider */}
-              <Box sx={{ borderTop: '1px solid rgba(255,255,255,0.15)', mt: 5, pt: 3, pb: 3 }}>
+              <Box sx={{ borderTop: '1px solid rgba(255,255,255,0.15)', mt: 3, pt: 2, pb: 2 }}>
                 <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
                   <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.55)', display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     © {new Date().getFullYear()} Medizo. All rights reserved.
@@ -3257,7 +3274,7 @@ const AppContent = () => {
         >
           <KeyboardArrowUpIcon />
         </Box>
-    </div>
+    </Box>
   );
 };
 
