@@ -203,7 +203,7 @@ const RegisterForm = ({ onClose }) => {
             ) : (
               <>
                 <Grid item xs={12} sm={6}>
-                  <TextField fullWidth label="Date of Birth" name="dateOfBirth" type="date" value={formData.dateOfBirth} onChange={handleChange} InputLabelProps={{ shrink: true }} />
+                  <TextField fullWidth label="Date of Birth" name="dateOfBirth" type="date" value={formData.dateOfBirth} onChange={handleChange} InputLabelProps={{ shrink: true }} inputProps={{ max: new Date().toISOString().split('T')[0] }} />
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <TextField fullWidth label="Contact Number" name="contactNumber" value={formData.contactNumber} onChange={handleChange} />

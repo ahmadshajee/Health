@@ -42,7 +42,8 @@ import {
   ListItemButton,
   useMediaQuery,
   useTheme,
-  keyframes
+  keyframes,
+  Slide
 } from '@mui/material';
 import { 
   Person as PersonIcon,
@@ -143,6 +144,10 @@ const theme = createTheme({
       main: '#134F4D',
     },
   },
+});
+
+const SlideTransition = React.forwardRef(function SlideTransition(props, ref) {
+  return <Slide direction="up" ref={ref} {...props} />;
 });
 
 // Main app content component
@@ -1111,6 +1116,7 @@ const AppContent = () => {
         onClose={handleCloseAuthDialog}
         fullWidth
         maxWidth="sm"
+        TransitionComponent={SlideTransition}
       >
         <DialogContent sx={{ p: 0 }}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -1796,7 +1802,7 @@ const AppContent = () => {
                 })()}
 
                 {/* Confirmation Dialog */}
-                <Dialog open={confirmDialog.open} onClose={() => setConfirmDialog({ open: false, prescriptionId: null, action: null })}>
+                <Dialog open={confirmDialog.open} onClose={() => setConfirmDialog({ open: false, prescriptionId: null, action: null })} TransitionComponent={SlideTransition}>
                   <DialogTitle>
                     {(() => {
                       if (confirmDialog.action === 'delete') return 'Delete Prescription';
@@ -1858,6 +1864,7 @@ const AppContent = () => {
                   onClose={() => setViewPrescriptionDialog({ open: false, prescription: null })}
                   maxWidth="md"
                   fullWidth
+                  TransitionComponent={SlideTransition}
                 >
                   <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'primary.main', color: 'white' }}>
                     <Box display="flex" alignItems="center">
@@ -1994,6 +2001,7 @@ const AppContent = () => {
                   onClose={() => setQrCodeDialogOpen(false)}
                   maxWidth="md"
                   fullWidth
+                  TransitionComponent={SlideTransition}
                   PaperProps={{
                     sx: {
                       minHeight: '80vh',
@@ -3321,6 +3329,7 @@ const AppContent = () => {
         maxWidth="md"
         fullWidth
         scroll="paper"
+        TransitionComponent={SlideTransition}
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#134F4D', color: '#fff' }}>
           <Typography variant="h6" fontWeight={700}>{policyDialog.type}</Typography>
