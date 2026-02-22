@@ -19,7 +19,7 @@ import {
   Chip
 } from '@mui/material';
 import { GoogleLogin } from '@react-oauth/google';
-import { jwtDecode } from 'jwt-decode';
+import jwtDecode from 'jwt-decode';
 import { useAuth } from '../../contexts/AuthContext';
 
 const RegisterForm = ({ onClose }) => {
