@@ -153,6 +153,7 @@ const SlideTransition = React.forwardRef(function SlideTransition(props, ref) {
 // Main app content component
 const AppContent = () => {
   const { isAuthenticated, user, logout, loading } = useAuth();
+  const hasActiveSession = isAuthenticated || Boolean(localStorage.getItem('token'));
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [authTabValue, setAuthTabValue] = useState(0);
   const [defaultRole, setDefaultRole] = useState('patient');
@@ -3170,7 +3171,7 @@ const AppContent = () => {
                 </Grid>
 
                 {/* Quick Links - only show when not logged in */}
-                {!isAuthenticated && (
+                {!hasActiveSession && (
                 <Grid item xs={12} sm={6} md={3}>
                   <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2, color: '#fff', letterSpacing: 0.5 }}>Quick Links</Typography>
                   {[
